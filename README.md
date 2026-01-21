@@ -44,3 +44,9 @@ git add .
 git commit -m "Add: USB Serial scanning logic"
 git push origin feature/usb-detection
 
+**⚠️Lưu ý:**
+- Không bao giờ code thẳng trên main hoặc develop: Luôn tạo nhánh feature.
+
+- Commit nhỏ và thường xuyên: Đừng đợi làm xong cả dự án mới commit. Hãy commit theo từng tính năng nhỏ (ví dụ: xong giao diện, xong kết nối DB).
+
+- Lời nhắn commit rõ ràng: Thay vì ghi "update", hãy ghi "Fix: sửa lỗi nhận diện camera" hoặc "Add: cấu hình MongoDB".
