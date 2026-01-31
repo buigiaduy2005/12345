@@ -77,7 +77,7 @@ function FaceLoginPage() {
                 message.success('Login successful!');
                 // Fix: Dùng setSession thay vì gọi lại hàm login (gây lỗi 400)
                 authService.setSession(response.user, response.token);
-                navigate('/dashboard');
+                navigate('/feed');
             } else {
                 const errorMsg = '❌ Khuôn mặt không khớp! Bạn chưa đăng ký Face ID hoặc khuôn mặt không được nhận diện.';
                 setErrorMessage(errorMsg);

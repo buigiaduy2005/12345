@@ -2,16 +2,15 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import viVN from 'antd/locale/vi_VN';
 import LoginPage from './pages/LoginPage';
-import LandingPage from './pages/LandingPage';
-import SocialFeedPage from './pages/SocialFeedPage';
 import DashboardPage from './pages/DashboardPage';
 import StaffPage from './pages/StaffPage';
 import UsbMonitorPage from './pages/UsbMonitorPage';
 import DocumentsPage from './pages/DocumentsPage';
 import FaceLoginPage from './pages/FaceLoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import FeedPage from './pages/FeedPage';
+import ProfilePage from './pages/ProfilePage';
 import './App.css';
-
 
 // Component bảo vệ route - kiểm tra đăng nhập
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -19,7 +18,7 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
-// Redirect dựa trên role: Admin → Dashboard, User → News Feed
+// Redirect dựa trên role
 function RoleBasedRedirect() {
   const userStr = localStorage.getItem('user');
   if (userStr) {
@@ -27,7 +26,6 @@ function RoleBasedRedirect() {
     if (user.role === 'Admin') {
       return <Navigate to="/dashboard" replace />;
     }
-    // Employee/User role → News Feed
     return <Navigate to="/feed" replace />;
   }
   return <Navigate to="/login" replace />;
@@ -38,26 +36,9 @@ function App() {
     <ConfigProvider locale={viVN}>
       <BrowserRouter>
         <Routes>
-          <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/face-login" element={<FaceLoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <RoleBasedRedirect />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/feed"
-            element={
-              <PrivateRoute>
-                <SocialFeedPage />
-              </PrivateRoute>
-            }
-          />
           <Route
             path="/dashboard"
             element={
@@ -90,7 +71,24 @@ function App() {
               </PrivateRoute>
             }
           />
-          <Route path="*" element={<PrivateRoute><RoleBasedRedirect /></PrivateRoute>} />
+          <Route
+            path="/feed"
+            element={
+              <PrivateRoute>
+                <FeedPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <ProfilePage />
+              </PrivateRoute>
+            }
+          />
+          <Route path="/" element={<RoleBasedRedirect />} />
+          <Route path="*" element={<RoleBasedRedirect />} />
         </Routes>
       </BrowserRouter>
     </ConfigProvider>
