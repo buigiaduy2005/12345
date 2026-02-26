@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { message } from 'antd';
 import PostComposer from './PostComposer';
 import PostCard from './PostCard';
-import { socialFeedApi } from '../../services/api';
+import api from '../../services/api';
 import styles from './FeedCenter.module.css';
 
 interface Post {
@@ -14,7 +14,7 @@ interface Post {
     privacy: string;
     mediaFiles: any[];
     likedBy: string[];
-    reactions: any;
+    reactions: Record<string, string[]>;
     commentCount: number;
     shareCount: number;
     createdAt: string;
@@ -24,12 +24,12 @@ interface Post {
 const FeedCenter = () => {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(1);
+    const [page] = useState(1);
 
     const fetchPosts = async () => {
         try {
             setLoading(true);
-            const data = await socialFeedApi.getPosts(page, 10);
+            const data = await api.get<{ posts: Post[] }>(`/api/posts?page=${page}&pageSize=10`);
             setPosts(data.posts || []);
         } catch (error: any) {
             console.error('Error fetching posts:', error);
@@ -74,7 +74,6 @@ const FeedCenter = () => {
                         key={post.id}
                         post={post}
                         onPostDeleted={handlePostDeleted}
-                        onPostUpdated={handlePostUpdated}
                     />
                 ))}
             </div>

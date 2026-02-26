@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Button, Typography, Space, Tag } from 'antd';
 import { WarningOutlined, UsbOutlined } from '@ant-design/icons';
 import * as signalR from '@microsoft/signalr';
-import { api } from '../services/api';
+import { api, API_BASE_URL } from '../services/api';
 import type { Device } from '../types';
 
 const { Text, Title } = Typography;
@@ -30,7 +30,7 @@ function UsbNotification({ userRole }: UsbNotificationProps) {
 
         // Tạo kết nối SignalR
         const newConnection = new signalR.HubConnectionBuilder()
-            .withUrl('http://localhost:5038/hubs/system')
+            .withUrl(`${API_BASE_URL}/hubs/system`)
             // .withAutomaticReconnect() // Tắt auto-reconnect để tránh infinite loop
             .configureLogging(signalR.LogLevel.Warning) // Giảm log spam
             .build();

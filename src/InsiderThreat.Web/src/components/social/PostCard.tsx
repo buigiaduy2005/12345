@@ -10,7 +10,7 @@ import {
     GlobalOutlined
 } from '@ant-design/icons';
 import { useState } from 'react';
-import { socialFeedApi } from '../../services/api';
+import api from '../../services/api';
 import styles from './PostCard.module.css';
 
 interface Post {
@@ -44,7 +44,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted, onPostUpdated 
     const handleLike = async () => {
         try {
             setLoading(true);
-            const result = await socialFeedApi.likePost(post.id);
+            const result = await api.post<{ liked: boolean; likeCount: number }>(`/api/posts/${post.id}/like`, {});
             setLiked(result.liked);
             setLikeCount(result.likeCount);
         } catch (error: any) {
@@ -57,7 +57,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostDeleted, onPostUpdated 
 
     const handleDelete = async () => {
         try {
-            await socialFeedApi.deletePost(post.id);
+            await api.delete<void>(`/api/posts/${post.id}`);
             if (onPostDeleted) {
                 onPostDeleted(post.id);
             }

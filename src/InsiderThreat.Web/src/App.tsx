@@ -11,6 +11,8 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import FeedPage from './pages/FeedPage';
 import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
+import StaffPage from './pages/StaffPage';
+import GroupsPage from './pages/GroupsPage';
 import './App.css';
 
 // Component bảo vệ route - kiểm tra đăng nhập
@@ -93,6 +95,22 @@ function App() {
             element={
               <PrivateRoute>
                 <ProfilePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/staff"
+            element={
+              <PrivateRoute>
+                <StaffPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/groups"
+            element={
+              <PrivateRoute>
+                <GroupsPage />
               </PrivateRoute>
             }
           />

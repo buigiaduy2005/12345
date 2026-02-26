@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// API Base URL - Server chạy ở localhost:5038
-const API_BASE_URL = 'http://127.0.0.1:5038';
+// API Base URL - đọc từ biến môi trường (tự động chọn dev/production)
+// Development: http://127.0.0.1:5038  (file .env)
+// Production:  http://150.95.104.244  (file .env.production)
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5038';
 
 // Tạo axios instance
 const apiClient = axios.create({

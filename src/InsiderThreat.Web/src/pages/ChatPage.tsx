@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services/auth';
+import { API_BASE_URL } from '../services/api';
 import { userService } from '../services/userService';
 import { chatService } from '../services/chatService';
 import type { Message as ApiMessage } from '../services/chatService';
@@ -245,7 +246,7 @@ export default function ChatPage() {
                 const getAvatarUrl = (u: User | null) => {
                     if (!u?.avatarUrl) return `https://i.pravatar.cc/150?u=${u?.username || 'user'}`;
                     if (u.avatarUrl.startsWith('http')) return u.avatarUrl;
-                    return `http://127.0.0.1:5038${u.avatarUrl}`;
+                    return `${API_BASE_URL}${u.avatarUrl}`;
                 };
 
                 const chatUsers: ChatUser[] = users
@@ -426,7 +427,7 @@ export default function ChatPage() {
                             backgroundImage: `url(${(() => {
                                 if (!currentUser?.avatarUrl) return `https://i.pravatar.cc/150?u=${currentUser?.username || 'me'}`;
                                 if (currentUser.avatarUrl.startsWith('http')) return currentUser.avatarUrl;
-                                return `http://127.0.0.1:5038${currentUser.avatarUrl}`;
+                                return `${API_BASE_URL}${currentUser.avatarUrl}`;
                             })()})`,
                             backgroundSize: 'cover',
                             cursor: 'pointer'
@@ -550,8 +551,8 @@ export default function ChatPage() {
                                                             <div
                                                                 key={msg.id}
                                                                 className="popover-media-item"
-                                                                style={{ backgroundImage: `url(http://localhost:5038${msg.attachmentUrl})` }}
-                                                                onClick={() => window.open(`http://localhost:5038${msg.attachmentUrl}`, '_blank')}
+                                                                style={{ backgroundImage: `url(${API_BASE_URL}${msg.attachmentUrl})` }}
+                                                                onClick={() => window.open(`${API_BASE_URL}${msg.attachmentUrl}`, '_blank')}
                                                                 title="View Image"
                                                             ></div>
                                                         ))}
@@ -564,7 +565,7 @@ export default function ChatPage() {
                                                         {filteredContent.map(msg => (
                                                             <a
                                                                 key={msg.id}
-                                                                href={`http://localhost:5038/api/upload/download/${msg.attachmentUrl?.split('/').pop()}?originalName=${encodeURIComponent(msg.attachmentName || 'file')}`}
+                                                                href={`${API_BASE_URL}/api/upload/download/${msg.attachmentUrl?.split('/').pop()}?originalName=${encodeURIComponent(msg.attachmentName || 'file')}`}
                                                                 className="popover-file-item"
                                                                 target="_blank"
                                                                 rel="noreferrer"
@@ -628,7 +629,7 @@ export default function ChatPage() {
                                                         {msg.attachmentType === 'image' ? (
                                                             <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 8 }}>
                                                                 <img
-                                                                    src={`http://localhost:5038${msg.attachmentUrl}`}
+                                                                    src={`${API_BASE_URL}${msg.attachmentUrl}`}
                                                                     alt="attachment"
                                                                     style={{
                                                                         maxWidth: '200px',
@@ -650,7 +651,7 @@ export default function ChatPage() {
                                                             </div>
                                                         ) : (
                                                             <a
-                                                                href={isChatUnlocked ? `http://localhost:5038/api/upload/download/${msg.attachmentUrl?.split('/').pop()}?originalName=${encodeURIComponent(msg.attachmentName || 'file')}` : '#'}
+                                                                href={isChatUnlocked ? `${API_BASE_URL}/api/upload/download/${msg.attachmentUrl?.split('/').pop()}?originalName=${encodeURIComponent(msg.attachmentName || 'file')}` : '#'}
                                                                 target={isChatUnlocked ? "_blank" : undefined}
                                                                 rel="noreferrer"
                                                                 style={{

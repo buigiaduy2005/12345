@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { authService } from '../services/auth';
 import { userService } from '../services/userService';
-import { api } from '../services/api';
+import { api, API_BASE_URL } from '../services/api';
 import { feedService } from '../services/feedService';
 import { confirmLogout } from '../utils/logoutUtils';
 import type { User, Post } from '../types';
@@ -268,7 +268,7 @@ export default function ProfilePage() {
     const getDisplayAvatarUrl = (url?: string) => {
         if (!url) return `https://i.pravatar.cc/150?u=${user.username}`;
         if (url.startsWith('http')) return url;
-        return `http://127.0.0.1:5038${url}`; // Prepend API URL for relative paths
+        return `${API_BASE_URL}${url}`; // Prepend API URL for relative paths
     };
 
     const avatarUrl = getDisplayAvatarUrl(user.avatarUrl);

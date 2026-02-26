@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { Layout, Input, Badge, Avatar, Dropdown } from 'antd';
 import {
     HomeOutlined,
@@ -15,7 +16,6 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../context/ThemeContext';
 import styles from './SocialHeader.module.css';
 
@@ -23,8 +23,8 @@ const { Header } = Layout;
 
 const SocialHeader = () => {
     const navigate = useNavigate();
-    const { i18n } = useTranslation();
     const { theme, toggleTheme } = useTheme();
+    const [lang, setLang] = useState('vi');
 
     const userMenuItems: MenuProps['items'] = [
         {
@@ -51,8 +51,8 @@ const SocialHeader = () => {
         {
             key: 'language',
             icon: <GlobalOutlined />,
-            label: i18n.language === 'vi' ? '🇬🇧 English' : '🇻🇳 Tiếng Việt',
-            onClick: () => i18n.changeLanguage(i18n.language === 'vi' ? 'en' : 'vi')
+            label: lang === 'vi' ? '🇬🇧 English' : '🇻🇳 Tiếng Việt',
+            onClick: () => setLang(lang === 'vi' ? 'en' : 'vi')
         },
         {
             type: 'divider'

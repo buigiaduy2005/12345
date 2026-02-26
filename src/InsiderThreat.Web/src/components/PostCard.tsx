@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { feedService } from '../services/feedService';
+import { API_BASE_URL } from '../services/api';
 import type { Post, Comment, User } from '../types';
 
 interface PostCardProps {
@@ -72,7 +73,7 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
         const url = typeof userOrUrl === 'string' ? userOrUrl : userOrUrl.authorAvatarUrl || userOrUrl.avatarUrl;
         if (!url) return `https://i.pravatar.cc/150?u=${localPost.authorName}`;
         if (url.startsWith('http')) return url;
-        return `http://127.0.0.1:5038${url}`;
+        return `${API_BASE_URL}${url}`;
     };
 
     // Determine my current reaction
@@ -236,7 +237,7 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
     const CurrentReactionLabel = myReaction ? (reactionLabels[myReaction] || 'Liked') : 'Like';
     // If not specific reaction but standard like (from myReaction logic being 'like'), it falls into generic blue.
     // However, for consistency, if myReaction is set, use the specialized color.
-    const CurrentReactionColor = myReaction ? (reactionColors[myReaction] || 'text-[#137fec]') : 'text-[#9dabb9] hover:text-white';
+    const CurrentReactionColor = myReaction ? (reactionColors[myReaction] || 'text-[#137fec]') : 'text-slate-500 hover:text-slate-800';
 
     // Icon Logic for Button:
     // If has reaction -> show that emoji. If no reaction -> show generic thumb_up icon (material symbol).
@@ -245,18 +246,18 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
     // For simplicity, let's use Emoji for all ACTIVE states, and Material Icon for INACTIVE.
 
     return (
-        <div className="bg-[#1e2126] border border-[#2a2e35] rounded-xl p-4 mb-4 shadow-sm hover:border-[#3b4754] transition-colors">
+        <div className="bg-white border border-[var(--color-border)] rounded-xl p-4 mb-4 shadow-sm hover:border-blue-200 hover:shadow-md transition-all">
             <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#2a2e35] overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden">
                         <img src={getAvatarUrl(localPost.authorAvatarUrl)} alt={localPost.authorName} className="w-full h-full object-cover" />
                     </div>
                     <div>
-                        <Link to={`/profile/${localPost.authorId}`} className="font-semibold text-white hover:underline">
+                        <Link to={`/profile/${localPost.authorId}`} className="font-semibold text-slate-900 hover:underline">
                             {localPost.authorName}
                         </Link>
                         <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] bg-[#2a2e35] px-1.5 py-0.5 rounded text-gray-400 border border-[#3b4754]">
+                            <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">
                                 {formatDate(localPost.createdAt)}
                             </span>
 
@@ -271,7 +272,7 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                             )}
 
                             {/* Visibility Badge */}
-                            <span className="flex items-center gap-1 text-[10px] text-[#9dabb9] bg-[#2a2e35] px-1.5 py-0.5 rounded border border-[#3b4754]">
+                            <span className="flex items-center gap-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                                 {getPrivacyIcon(localPost.privacy)}
                                 {localPost.allowedDepartments && localPost.allowedDepartments.length > 0
                                     ? `${localPost.allowedDepartments.join(', ')} Dept`
@@ -283,11 +284,11 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                     </div>
                 </div>
                 <div className="relative" ref={menuRef}>
-                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-[#9dabb9] hover:text-white p-1 rounded-full hover:bg-[#2a2e35]">
+                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-400 hover:text-slate-700 p-1 rounded-full hover:bg-slate-100">
                         <span className="material-symbols-outlined">more_horiz</span>
                     </button>
                     {isMenuOpen && (
-                        <div className="absolute right-0 top-8 bg-[#283039] border border-[#3b4754] rounded-lg shadow-lg z-10 w-32 py-1 flex flex-col">
+                        <div className="absolute right-0 top-8 bg-white border border-[var(--color-border)] rounded-lg shadow-lg z-10 w-32 py-1 flex flex-col">
                             {currentUser?.role === 'Admin' && (
                                 <>
                                     <button onClick={async () => {
@@ -296,17 +297,17 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                                         setLocalPost(updated);
                                         onPostUpdated(updated);
                                         setIsMenuOpen(false);
-                                    }} className="text-left px-4 py-2 text-sm text-[#9dabb9] hover:text-white hover:bg-[#3b4754] flex items-center gap-2">
+                                    }} className="text-left px-4 py-2 text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2">
                                         <span className="material-symbols-outlined text-sm">push_pin</span> {localPost.isPinned ? 'Unpin' : 'Pin'}
                                     </button>
-                                    <button onClick={handleHide} className="text-left px-4 py-2 text-sm text-[#9dabb9] hover:text-white hover:bg-[#3b4754] flex items-center gap-2">
+                                    <button onClick={handleHide} className="text-left px-4 py-2 text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2">
                                         <span className="material-symbols-outlined text-sm">visibility_off</span> Hide
                                     </button>
                                 </>
                             )}
                             {isOwner && (
                                 <>
-                                    <button onClick={() => { setIsEditing(true); setIsMenuOpen(false); }} className="text-left px-4 py-2 text-sm text-[#9dabb9] hover:text-white hover:bg-[#3b4754] flex items-center gap-2">
+                                    <button onClick={() => { setIsEditing(true); setIsMenuOpen(false); }} className="text-left px-4 py-2 text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2">
                                         <span className="material-symbols-outlined text-sm">edit</span> Edit
                                     </button>
                                     <button onClick={handleDelete} className="text-left px-4 py-2 text-sm text-red-500 hover:bg-[#3b4754] flex items-center gap-2">
@@ -315,7 +316,7 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                                 </>
                             )}
                             {/* Every post can be reported (except maybe own?) */}
-                            <button onClick={handleReport} className="text-left px-4 py-2 text-sm text-[#9dabb9] hover:text-white hover:bg-[#3b4754] flex items-center gap-2">
+                            <button onClick={handleReport} className="text-left px-4 py-2 text-sm text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm">flag</span> Report
                             </button>
                         </div>
@@ -344,11 +345,11 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                         <textarea
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
-                            className="bg-[#111418] border border-[#3b4754] rounded-lg p-2 text-white w-full outline-none focus:border-[#137fec]"
+                            className="bg-slate-50 border border-[var(--color-border)] rounded-lg p-2 text-slate-900 w-full outline-none focus:border-[var(--color-primary)]"
                             rows={3}
                         />
                         <div className="flex justify-end gap-2">
-                            <button onClick={() => { setIsEditing(false); setEditContent(localPost.content); }} className="text-xs text-[#9dabb9] hover:text-white">Cancel</button>
+                            <button onClick={() => { setIsEditing(false); setEditContent(localPost.content); }} className="text-xs text-slate-500 hover:text-slate-900">Cancel</button>
                             <button onClick={handleEditSave} className="text-xs bg-[#137fec] text-white px-3 py-1 rounded hover:bg-[#137fec]/90">Save</button>
                         </div>
                     </div>
@@ -358,14 +359,14 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
 
                 {/* Link Preview */}
                 {localPost.linkInfo && (
-                    <a href={localPost.linkInfo.url} target="_blank" rel="noreferrer" className="block mt-2 mb-2 bg-[#2a2e35] rounded-lg overflow-hidden hover:bg-[#3b4754] transition-colors border border-[#3b4754] group">
+                    <a href={localPost.linkInfo.url} target="_blank" rel="noreferrer" className="block mt-2 mb-2 bg-slate-50 rounded-lg overflow-hidden hover:bg-slate-100 transition-colors border border-slate-200 group">
                         {localPost.linkInfo.imageUrl && (
                             <img src={localPost.linkInfo.imageUrl} alt="" className="w-full h-48 object-cover" />
                         )}
                         <div className="p-3">
-                            <div className="text-sm font-bold text-gray-200 group-hover:text-blue-400 mb-1 line-clamp-2">{localPost.linkInfo.title}</div>
-                            {localPost.linkInfo.description && <div className="text-xs text-gray-400 line-clamp-2 mb-1">{localPost.linkInfo.description}</div>}
-                            <div className="text-xs text-gray-500 flex items-center gap-1">
+                            <div className="text-sm font-bold text-slate-800 group-hover:text-blue-600 mb-1 line-clamp-2">{localPost.linkInfo.title}</div>
+                            {localPost.linkInfo.description && <div className="text-xs text-slate-500 line-clamp-2 mb-1">{localPost.linkInfo.description}</div>}
+                            <div className="text-xs text-slate-400 flex items-center gap-1">
                                 <span className="material-symbols-outlined text-[10px]">link</span>
                                 {new URL(localPost.linkInfo.url).hostname}
                             </div>
@@ -389,15 +390,15 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                         } else {
                             // File
                             return (
-                                <a key={idx} href={fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 bg-[#2a2e35] rounded-lg hover:bg-[#3b4754] transition-colors border border-[#3b4754]">
+                                <a key={idx} href={fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200">
                                     <div className="bg-blue-500/20 p-2 rounded-lg">
                                         <span className="material-symbols-outlined text-blue-500">description</span>
                                     </div>
                                     <div className="flex-1 overflow-hidden">
-                                        <div className="text-sm font-medium text-white truncate">{media.fileName || 'Attached File'}</div>
-                                        <div className="text-xs text-[#9dabb9]">{media.fileSize ? `${(media.fileSize / 1024).toFixed(1)} KB` : 'Download'}</div>
+                                        <div className="text-sm font-medium text-slate-800 truncate">{media.fileName || 'Attached File'}</div>
+                                        <div className="text-xs text-slate-500">{media.fileSize ? `${(media.fileSize / 1024).toFixed(1)} KB` : 'Download'}</div>
                                     </div>
-                                    <span className="material-symbols-outlined text-[#9dabb9]">download</span>
+                                    <span className="material-symbols-outlined text-slate-400">download</span>
                                 </a>
                             );
                         }
@@ -421,12 +422,12 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                                 <div className="flex items-center gap-1">
                                     <div className="flex -space-x-2">
                                         {activeKeyStats.slice(0, 3).map(stat => (
-                                            <span key={stat.type} className="w-5 h-5 flex items-center justify-center bg-[#1e2126] rounded-full border border-[#2a2e35] text-xs z-10" title={stat.type}>
+                                            <span key={stat.type} className="w-5 h-5 flex items-center justify-center bg-white rounded-full border border-slate-200 text-xs z-10" title={stat.type}>
                                                 {icons[stat.type]}
                                             </span>
                                         ))}
                                     </div>
-                                    <span className="text-[#9dabb9] text-sm hover:underline cursor-pointer ml-1">
+                                    <span className="text-slate-500 text-sm hover:underline cursor-pointer ml-1">
                                         {Object.values(localPost.reactions || {}).flat().length}
                                     </span>
                                 </div>
@@ -463,7 +464,7 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                     </button>
                     {/* Reaction Popup */}
                     <div className="absolute bottom-full left-0 pb-2 hidden group-hover:block z-20 w-max">
-                        <div className="flex bg-[#2a2e35] rounded-full p-1 shadow-lg border border-[#3b4754] gap-1 animate-in fade-in zoom-in duration-200 origin-bottom-left">
+                        <div className="flex bg-white rounded-full p-1 shadow-lg border border-slate-200 gap-1 animate-in fade-in zoom-in duration-200 origin-bottom-left">
                             {['👍', '❤️', '😂', '😮', '😢', '😡'].map(emoji => (
                                 <button
                                     key={emoji}
@@ -510,14 +511,14 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
             </div>
 
             {showComments && (
-                <div className="post-comments-section p-4 bg-[#1e2126] border-t border-[#2a2e35]">
+                <div className="post-comments-section p-4 bg-slate-50 border-t border-slate-200">
                     <div className="flex gap-2 mb-4">
                         <input
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                             placeholder="Write a comment..."
-                            className="flex-1 bg-[#0f1115] border border-[#2a2e35] rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-[#3b82f6]"
+                            className="flex-1 bg-white border border-slate-200 rounded-full px-4 py-2 text-sm text-slate-900 focus:outline-none focus:border-[var(--color-primary)]"
                         />
                         <button onClick={handleAddComment} disabled={!newComment.trim()} className="text-[#3b82f6] disabled:text-gray-500">
                             <span className="material-symbols-outlined">send</span>
@@ -529,11 +530,11 @@ export default function PostCard({ post, currentUser, onPostUpdated, onPostDelet
                             <div key={comment.id} className="comment flex gap-3">
                                 <div className="user-avatar w-8 h-8 min-w-8" style={{ backgroundImage: `url(${getAvatarUrl(comment.authorAvatarUrl || '')})` }}></div>
                                 <div className="flex-1">
-                                    <div className="comment-content bg-[#2a2e35] rounded-2xl px-3 py-2 inline-block max-w-full">
-                                        <div className="font-bold text-xs text-white mb-0.5">{comment.authorName}</div>
-                                        <div className="text-sm text-[#e5e7eb]">{comment.content}</div>
+                                    <div className="comment-content bg-slate-100 rounded-2xl px-3 py-2 inline-block max-w-full">
+                                        <div className="font-bold text-xs text-slate-800 mb-0.5">{comment.authorName}</div>
+                                        <div className="text-sm text-slate-700">{comment.content}</div>
                                     </div>
-                                    <div className="text-[10px] text-[#9ca3af] mt-1 ml-2">{formatTimeAgo(comment.createdAt)}</div>
+                                    <div className="text-[10px] text-slate-400 mt-1 ml-2">{formatTimeAgo(comment.createdAt)}</div>
                                 </div>
                             </div>
                         ))}

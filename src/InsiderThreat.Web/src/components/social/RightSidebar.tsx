@@ -1,7 +1,7 @@
 import { Avatar, Badge } from 'antd';
 import { UserOutlined, MoreOutlined, SearchOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { usersApi } from '../../services/api';
+import api from '../../services/api';
 import styles from './RightSidebar.module.css';
 
 interface User {
@@ -27,7 +27,7 @@ const RightSidebar = () => {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const users = await usersApi.getUsers();
+            const users = await api.get<User[]>('/api/users');
             // Filter out current user and limit to 10 contacts
             const filteredUsers = users
                 .filter((u: User) => u.id !== currentUserId)

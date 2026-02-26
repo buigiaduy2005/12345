@@ -1,7 +1,7 @@
 import { Card, Avatar, Input, Button, message } from 'antd';
 import { UserOutlined, PictureOutlined, VideoCameraOutlined, SmileOutlined, SendOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { socialFeedApi } from '../../services/api';
+import api from '../../services/api';
 import styles from './PostComposer.module.css';
 
 interface PostComposerProps {
@@ -21,7 +21,7 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
 
         try {
             setLoading(true);
-            const newPost = await socialFeedApi.createPost({
+            const newPost = await api.post<any>('/api/posts', {
                 content: content.trim(),
                 privacy: 'Public'
             });

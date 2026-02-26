@@ -2,30 +2,45 @@ import { useState, useEffect, useRef } from 'react';
 import { message } from 'antd';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { authService } from '../services/auth';
+import { API_BASE_URL } from '../services/api';
 import { userService } from '../services/userService';
-import { chatService } from '../services/chatService';
 import { feedService } from '../services/feedService';
-import api from '../services/api';
 import type { User, Post } from '../types';
 import PostCard from '../components/PostCard';
-import NotificationBell from '../components/NotificationBell';
-import SearchBar from '../components/SearchBar';
-import { confirmLogout } from '../utils/logoutUtils';
+import NavigationBar from '../components/NavigationBar';
+import LeftSidebar from '../components/LeftSidebar';
+import FloatingChat from '../components/chat/FloatingChat';
+import ChatSidebar from '../components/chat/ChatSidebar';
 import { DEPARTMENTS, POST_CATEGORIES } from '../constants';
 import { detectSensitiveContent } from '../utils/contentAnalyzer';
 import './FeedPage.css';
 
-// Import Notification type
-import type { Notification } from '../services/notificationService';
+
 
 export default function FeedPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const user = authService.getCurrentUser();
-    const [activeChatUser, setActiveChatUser] = useState<any | null>(null);
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-    const [contacts, setContacts] = useState<User[]>([]);
+    const [openChats, setOpenChats] = useState<User[]>([]); // Max 3 chat windows
+
+    // Helper function to open a chat window
+    const handleOpenChat = (chatUser: User) => {
+        // Check if already open
+        if (openChats.some(u => u.id === chatUser.id || u.username === chatUser.username)) {
+            return; // Already open
+        }
+        // Check max limit
+        if (openChats.length >= 3) {
+            message.warning('Maximum 3 chat windows allowed');
+            return;
+        }
+        setOpenChats(prev => [...prev, chatUser]);
+    };
+
+    // Function to close a chat window
+    const handleCloseChat = (chatUserId: string) => {
+        setOpenChats(prev => prev.filter(u => (u.id || u.username) !== chatUserId));
+    };
 
     // Feed State
     const [posts, setPosts] = useState<Post[]>([]);
@@ -53,28 +68,7 @@ export default function FeedPage() {
     // Sensitive Content Warning State
     const [showWarning, setShowWarning] = useState(false);
     const [warningMessage, setWarningMessage] = useState('');
-    const [detectedWords, setDetectedWords] = useState<string[]>([]);
-    const [proceedWithPost, setProceedWithPost] = useState(false);
 
-    // Notification State
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [showNotifications, setShowNotifications] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
-
-    // Quick Chat State
-    // REMOVED: quickMessages, quickInput, interval
-    // const [quickMessages, setQuickMessages] = useState<any[]>([]);
-    // const [quickInput, setQuickInput] = useState("");
-    // const quickChatInterval = useRef<number | null>(null);
-    // const quickChatScrollRef = useRef<HTMLDivElement>(null);
-
-    const quickActions = [
-        "👋 Xin chào",
-        "💼 Trao đổi công việc",
-        "❓ Bạn có rảnh không?",
-        "📧 Check mail nhé",
-        "👍 OK / Đã rõ"
-    ];
 
     // Detect hash for focused post (from notification)
     useEffect(() => {
@@ -114,13 +108,6 @@ export default function FeedPage() {
                 });
                 setPosts(sortedPosts);
 
-                const users = await userService.getAllUsers();
-                const otherUsers = users.filter(u => u.username !== user?.username);
-                setContacts(otherUsers);
-
-                const notifs = await api.get<Notification[]>('/api/notifications');
-                setNotifications(notifs);
-                setUnreadCount(notifs.length);
 
             } catch (error) {
                 console.error("Error loading feed data", error);
@@ -130,22 +117,6 @@ export default function FeedPage() {
         };
 
         fetchData();
-
-        const notifInterval = setInterval(async () => {
-            try {
-                const notifs = await api.get<Notification[]>('/api/notifications');
-                setNotifications(notifs);
-                setUnreadCount(notifs.length);
-            } catch (e) { }
-        }, 60000);
-
-        const handleResize = () => setIsMobile(window.innerWidth < 1024);
-        window.addEventListener('resize', handleResize);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            clearInterval(notifInterval);
-        };
     }, [user?.username, navigate]);
 
     // Quick Chat Effects - REMOVED history loading
@@ -153,35 +124,15 @@ export default function FeedPage() {
 
     // Scroll effect REMOVED
 
-    const handleQuickSend = async (content: string) => {
-        if (!content || !activeChatUser || !user?.id) return;
-        try {
-            await chatService.sendMessage({
-                senderId: user.id,
-                receiverId: activeChatUser.id || activeChatUser.username,
-                content: content,
-                senderContent: content
-            });
-            message.success(`Đã gửi: "${content}"`);
-        } catch (e) {
-            console.error(e);
-            message.error("Gửi tin nhắn thất bại");
-        }
-    };
 
-    const handleLogout = () => {
-        confirmLogout(() => {
-            authService.logout();
-            navigate('/login');
-        });
-    };
+
 
     const getAvatarUrl = (userOrUrl?: any) => {
         if (!userOrUrl) return `https://i.pravatar.cc/150?u=user`;
         const url = typeof userOrUrl === 'string' ? userOrUrl : userOrUrl.avatarUrl;
         if (!url) return `https://i.pravatar.cc/150?u=${userOrUrl.username || 'user'}`;
         if (url.startsWith('http')) return url;
-        return `http://127.0.0.1:5038${url}`;
+        return `${API_BASE_URL}${url}`;
     };
 
     // Feed Actions
@@ -231,7 +182,7 @@ export default function FeedPage() {
 
                 mediaFiles.push({
                     type: fileType,
-                    url: `http://127.0.0.1:5038${uploadResult.url}`,
+                    url: `${API_BASE_URL}${uploadResult.url}`,
                     fileName: uploadResult.fileName,
                     fileSize: uploadResult.size
                 });
@@ -305,372 +256,296 @@ export default function FeedPage() {
     });
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-[var(--color-dark-bg)] text-[var(--color-text-main)] font-[Inter] overflow-x-hidden">
-            {/* Header */}
-            <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-[var(--color-border)] bg-[var(--color-dark-surface)] px-4 py-3 lg:px-6 h-[var(--header-height)]">
-                <div className="lg:hidden">
-                    <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="text-white">
-                        <span className="material-symbols-outlined">menu</span>
-                    </button>
-                </div>
-                <div className="flex items-center gap-4 lg:gap-8">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/feed')}>
-                        <div className="logo-icon" style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span className="material-symbols-outlined" style={{ color: '#3b82f6' }}>hub</span>
-                        </div>
-                        <span className="text-xl font-bold text-white tracking-tight hidden sm:block">SocialNet</span>
-                    </div>
+        <div className="flex min-h-screen w-full flex-col bg-[var(--color-bg)] text-[var(--color-text-main)]">
+            {/* New Navigation Bar */}
+            <NavigationBar onChatClick={() => navigate('/chat')} />
 
-                    <label className="flex flex-col min-w-40 !h-10 max-w-64 lg:w-96 hidden md:flex">
-                        <SearchBar />
-                    </label>
-                </div>
+            <div className="social-layout">
+                {/* Left Navigation Sidebar */}
+                <LeftSidebar />
 
-                <div className="flex items-center justify-end gap-4">
-                    <button className="flex items-center justify-center text-[var(--color-text-muted)] hover:text-white transition-colors relative" onClick={() => setShowNotifications(!showNotifications)}>
-                        <span className="material-symbols-outlined">notifications</span>
-                        {unreadCount > 0 && <span className="absolute top-0 right-0 size-2 bg-red-500 rounded-full border border-[var(--color-dark-surface)]"></span>}
-                    </button>
-                    {showNotifications && (
-                        <div className="absolute top-16 right-4 sm:right-10 w-80 bg-[var(--color-dark-surface)] border border-[var(--color-border)] rounded-lg shadow-xl z-50 animate-fade-in max-h-[400px] overflow-y-auto">
-                            <div className="p-4 border-b border-[var(--color-border)]">
-                                <h3 className="text-white font-bold">Notifications</h3>
+                {/* Main Feed Content */}
+                <div className="feed-wrapper">
+                    <div className="w-full flex flex-col gap-6">
+                        {/* ── Welcome Banner ── */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%)',
+                            borderRadius: 20,
+                            padding: '24px 28px',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 6px 20px rgba(37,99,235,0.35)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                        }}>
+                            {/* Background decoration */}
+                            <div style={{
+                                position: 'absolute', right: -30, top: -30,
+                                width: 160, height: 160,
+                                borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.08)',
+                                pointerEvents: 'none',
+                            }} />
+                            <div style={{
+                                position: 'absolute', right: 60, bottom: -50,
+                                width: 120, height: 120,
+                                borderRadius: '50%',
+                                background: 'rgba(255,255,255,0.05)',
+                                pointerEvents: 'none',
+                            }} />
+                            <div>
+                                <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>
+                                    Chào mừng trở lại, {user?.fullName || user?.username} 👋
+                                </div>
+                                <div style={{ fontSize: 13, opacity: 0.85 }}>
+                                    Hôm nay có gì mới không? Chia sẻ với đồng nghiệp nhé!
+                                </div>
                             </div>
-                            <div className="flex flex-col">
-                                {notifications.length > 0 ? notifications.map(n => (
-                                    <div key={n.id} className="p-4 hover:bg-[var(--color-dark-surface-lighter)] border-b border-[var(--color-border)] cursor-pointer transition-colors" onClick={() => {
-                                        if (n.link) navigate(n.link);
-                                        setShowNotifications(false);
-                                    }}>
-                                        <div className="text-white text-sm font-medium">{n.message}</div>
-                                        <div className="text-[var(--color-text-muted)] text-xs mt-1">
-                                            {n.actorName && `${n.actorName} • `}
-                                            {new Date(n.createdAt).toLocaleString()}
-                                        </div>
-                                    </div>
-                                )) : <div className="p-4 text-[var(--color-text-muted)] text-sm">No new notifications</div>}
+                            <div style={{
+                                background: 'rgba(255,255,255,0.2)',
+                                borderRadius: 50,
+                                padding: '6px 16px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                letterSpacing: '0.05em',
+                                whiteSpace: 'nowrap',
+                                backdropFilter: 'blur(4px)',
+                                flexShrink: 0,
+                            }}>
+                                {user?.department || user?.role || 'Nhân viên'}
                             </div>
                         </div>
-                    )}
-                    <div
-                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-[var(--color-border)] cursor-pointer"
-                        style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}
-                        onClick={() => navigate('/profile')}
-                    ></div>
-                </div>
-            </header>
 
-            <div className="flex flex-1 justify-center py-6 px-4 lg:px-8 gap-6 max-w-[1600px] mx-auto w-full">
-                {/* Left Sidebar */}
-                <aside className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out bg-[var(--color-dark-surface)] lg:relative lg:translate-x-0 ${showMobileMenu ? 'translate-x-0' : '-translate-x-full'} lg:bg-transparent lg:block pt-20 lg:pt-0`}>
-                    <div className="lg:hidden absolute top-4 right-4">
-                        <button onClick={() => setShowMobileMenu(false)} className="text-white"><span className="material-symbols-outlined">close</span></button>
-                    </div>
-                    <nav className="flex flex-col gap-2 p-4 lg:p-0">
-                        {/* Using inline styles or custom classes for sidebar items to match exactly */}
-                        <div className="bg-[var(--color-dark-surface)] rounded-xl p-2 border border-[var(--color-border)]">
-                            <a href="#" className="flex items-center gap-3 px-4 py-3 bg-[var(--color-primary)] text-white rounded-lg font-medium transition-colors">
-                                <span className="material-symbols-outlined">home</span><span>Feed</span>
-                            </a>
-                            <a href="#" className="flex items-center gap-3 px-4 py-3 text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-dark-surface-lighter)] rounded-lg font-medium transition-colors" onClick={() => navigate('/profile')}>
-                                <span className="material-symbols-outlined">person</span><span>Profile</span>
-                            </a>
-                            <a href="#" className="flex items-center gap-3 px-4 py-3 text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-dark-surface-lighter)] rounded-lg font-medium transition-colors" onClick={() => navigate('/chat')}>
-                                <span className="material-symbols-outlined">chat</span><span>Chat</span>
-                            </a>
-                            {user?.role === 'Admin' && (
-                                <a href="#" className="flex items-center gap-3 px-4 py-3 text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-dark-surface-lighter)] rounded-lg font-medium transition-colors" onClick={() => navigate('/dashboard')}>
-                                    <span className="material-symbols-outlined">admin_panel_settings</span><span>Admin Manager</span>
-                                </a>
-                            )}
-                            <a href="#" className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-[var(--color-dark-surface-lighter)] rounded-lg font-medium transition-colors mt-2" onClick={handleLogout}>
-                                <span className="material-symbols-outlined">logout</span><span>Logout</span>
-                            </a>
-                        </div>
-                    </nav>
-                </aside>
-
-                {/* Feed Content */}
-                <main className="flex-1 max-w-2xl flex flex-col gap-6">
-                    {/* Create Post */}
-                    <div className="bg-[var(--color-dark-surface)] rounded-xl p-4 border border-[var(--color-border)] shadow-sm relative z-0">
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="user-avatar" style={{ backgroundImage: `url(${getAvatarUrl(user)})`, width: 40, height: 40, minWidth: 40, borderRadius: '50%', backgroundSize: 'cover' }}></div>
-                            <input
-                                className="flex-1 bg-[var(--color-dark-bg)] border-none rounded-2xl h-12 px-6 text-white placeholder:text-[var(--color-text-muted)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all"
-                                placeholder={`What's on your mind?`}
+                        {/* Create Post */}
+                        <div className="bg-white rounded-2xl p-6 border border-[var(--color-border)] shadow-sm">
+                            <textarea
+                                className="w-full bg-slate-50 text-slate-900 rounded-xl p-4 resize-none border border-[var(--color-border)] focus:border-[var(--color-primary)] focus:outline-none transition-colors placeholder:text-slate-400"
+                                placeholder={`What's on your mind, ${user?.fullName || user?.username}?`}
                                 value={newPostContent}
                                 onChange={(e) => setNewPostContent(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreatePost()}
                             />
-                            <button
-                                onClick={handleCreatePost}
-                                disabled={(!newPostContent.trim() && !selectedFile) || isPosting}
-                                className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
-                            >
-                                {isPosting ? 'Posting...' : 'Post'}
-                            </button>
-                        </div>
-
-                        {/* Image Preview */}
-                        {previewUrl && (
-                            <div className="relative mb-4 rounded-lg overflow-hidden border border-[var(--color-border)]">
-                                <img src={previewUrl} alt="Preview" className="w-full max-h-[300px] object-cover" />
-                                <button
-                                    onClick={removeSelectedFile}
-                                    className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-sm">close</span>
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-4 border-t border-[var(--color-border)] pt-3 justify-between">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="user-avatar" style={{ backgroundImage: `url(${getAvatarUrl(user)})`, width: 40, height: 40, minWidth: 40, borderRadius: '50%', backgroundSize: 'cover' }}></div>
                                 <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleFileSelect}
-                                    accept="image/*,video/*,application/pdf"
-                                    style={{ display: 'none' }}
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl h-12 px-6 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none transition-all"
+                                    placeholder={`What's on your mind?`}
+                                    value={newPostContent}
+                                    onChange={(e) => setNewPostContent(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleCreatePost()}
                                 />
-                                <button className="flex items-center gap-2 text-[var(--color-text-muted)] hover:text-white px-3 py-2 rounded-lg hover:bg-[var(--color-dark-surface-lighter)] transition-colors" onClick={() => fileInputRef.current?.click()}>
-                                    <span className="material-symbols-outlined text-green-500">attach_file</span> Media
-                                </button>
-
-                            </div>
-
-                            {/* Visibility Selector */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-[var(--color-text-muted)] text-sm">To:</span>
-                                <select
-                                    className="bg-[var(--color-dark-bg)] text-white text-sm border border-[var(--color-border)] rounded-lg px-2 py-2 focus:outline-none focus:border-[var(--color-primary)] max-w-[120px]"
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        setAllowedRoles([]);
-                                        setAllowedDepartments([]);
-
-                                        if (val === 'Public') {
-                                            // Default: All empty
-                                        } else if (val === 'Managers') {
-                                            setAllowedRoles(['Manager', 'Admin']);
-                                        } else if (DEPARTMENTS.includes(val)) {
-                                            setAllowedDepartments([val]);
-                                        }
-                                    }}
-                                >
-                                    <option value="Public">Everyone</option>
-                                    <option value="Managers">Managers Only</option>
-                                    <optgroup label="Departments">
-                                        {DEPARTMENTS.map(dept => (
-                                            <option key={dept} value={dept}>{dept} Dept</option>
-                                        ))}
-                                    </optgroup>
-                                </select>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <span className="text-[var(--color-text-muted)] text-sm">Tag:</span>
-                                <select
-                                    className="bg-[var(--color-dark-bg)] text-white text-sm border border-[var(--color-border)] rounded-lg px-2 py-2 focus:outline-none focus:border-[var(--color-primary)]"
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                >
-                                    {POST_CATEGORIES.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="bg-[var(--color-dark-surface)] rounded-xl p-4 border border-[var(--color-border)] shadow-sm">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <span className="text-sm font-semibold text-white">Filters:</span>
-
-                            {/* Category Filter */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-[var(--color-text-muted)]">Category:</span>
-                                <select
-                                    className="bg-[var(--color-dark-bg)] text-white text-sm border border-[var(--color-border)] rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--color-primary)]"
-                                    value={filterCategory}
-                                    onChange={(e) => setFilterCategory(e.target.value)}
-                                >
-                                    <option value="All">All</option>
-                                    {POST_CATEGORIES.map(cat => (
-                                        <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Date Filter */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-[var(--color-text-muted)]">Date:</span>
-                                <div className="flex gap-1">
-                                    {['All', 'Today', 'Week', 'Month'].map(period => (
-                                        <button
-                                            key={period}
-                                            onClick={() => setFilterDate(period)}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterDate === period
-                                                ? 'bg-[var(--color-primary)] text-white'
-                                                : 'bg-[var(--color-dark-bg)] text-[var(--color-text-muted)] hover:text-white border border-[var(--color-border)]'
-                                                }`}
-                                        >
-                                            {period}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Active Filter Count */}
-                            {(filterCategory !== 'All' || filterDate !== 'All') && (
                                 <button
-                                    onClick={() => {
-                                        setFilterCategory('All');
-                                        setFilterDate('All');
-                                    }}
-                                    className="text-xs text-[var(--color-primary)] hover:underline ml-auto"
+                                    onClick={handleCreatePost}
+                                    disabled={(!newPostContent.trim() && !selectedFile) || isPosting}
+                                    className="bg-[var(--color-primary)] text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
                                 >
-                                    Clear Filters
+                                    {isPosting ? 'Posting...' : 'Post'}
                                 </button>
-                            )}
-                        </div>
-                    </div>
+                            </div>
 
-                    {/* Posts */}
-                    {isLoading ? (
-                        <div className="flex justify-center items-center py-20">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Show "View All Posts" button when in focused mode */}
-                            {focusedPostId && (
-                                <div className="mb-4 p-4 bg-[var(--color-dark-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between">
-                                    <p className="text-[var(--color-text-muted)] text-sm">
-                                        Viewing single post from notification
-                                    </p>
+                            {/* Image Preview */}
+                            {previewUrl && (
+                                <div className="relative mb-4 rounded-lg overflow-hidden border border-[var(--color-border)]">
+                                    <img src={previewUrl} alt="Preview" className="w-full max-h-[300px] object-cover" />
                                     <button
-                                        onClick={() => {
-                                            setFocusedPostId(null);
-                                            window.history.pushState({}, '', '/feed');
-                                        }}
-                                        className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors text-sm font-medium"
+                                        onClick={removeSelectedFile}
+                                        className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
                                     >
-                                        View All Posts
+                                        <span className="material-symbols-outlined text-sm">close</span>
                                     </button>
                                 </div>
                             )}
 
-                            {(focusedPostId ? filteredPosts.filter(p => p.id === focusedPostId) : filteredPosts).map(post => (
-                                <div
-                                    key={post.id}
-                                    id={`post-${post.id}`}
-                                    style={{
-                                        border: highlightedPostId === post.id ? '3px solid #ff4d4f' : 'none',
-                                        borderRadius: '8px',
-                                        padding: highlightedPostId === post.id ? '8px' : '0',
-                                        backgroundColor: highlightedPostId === post.id ? 'rgba(255, 77, 79, 0.05)' : 'transparent'
-                                    }}
-                                >
-                                    {highlightedPostId === post.id && (
-                                        <div style={{
-                                            backgroundColor: '#ff4d4f',
-                                            color: 'white',
-                                            padding: '8px 12px',
-                                            borderRadius: '4px',
-                                            marginBottom: '8px',
-                                            fontWeight: 600,
-                                            textAlign: 'center'
-                                        }}>
-                                            📌 Bài viết được báo cáo
-                                        </div>
-                                    )}
-                                    <PostCard
-                                        key={post.id}
-                                        post={post}
-                                        currentUser={user}
-                                        onPostUpdated={handlePostUpdated}
-                                        onPostDeleted={handlePostDeleted}
+                            <div className="flex items-center gap-4 border-t border-[var(--color-border)] pt-3 justify-between">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileSelect}
+                                        accept="image/*,video/*,application/pdf"
+                                        style={{ display: 'none' }}
                                     />
-                                </div>
-                            ))}
-                        </>
-                    )}
-                </main>
+                                    <button className="flex items-center gap-2 text-[var(--color-text-muted)] hover:text-white px-3 py-2 rounded-lg hover:bg-[var(--color-dark-surface-lighter)] transition-colors" onClick={() => fileInputRef.current?.click()}>
+                                        <span className="material-symbols-outlined text-green-500">attach_file</span> Media
+                                    </button>
 
-                {/* Right Sidebar - Contacts */}
-                <aside className="w-80 hidden lg:flex flex-col gap-6">
-                    <div className="bg-[var(--color-dark-surface)] rounded-xl p-5 border border-[var(--color-border)] shadow-sm">
-                        <h3 className="text-white text-lg font-bold mb-4">Contacts</h3>
-                        <div className="flex flex-col gap-2">
-                            {contacts.map((c) => (
-                                <div key={c.id || c.username} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--color-dark-surface-lighter)] cursor-pointer transition-colors" onClick={() => setActiveChatUser(c)}>
-                                    <div className="relative">
-                                        <div className="user-avatar" style={{ backgroundImage: `url(${getAvatarUrl(c)})`, width: 36, height: 36, borderRadius: '50%', backgroundSize: 'cover' }}></div>
-                                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[var(--color-dark-surface)]"></div>
+                                </div>
+
+                                {/* Visibility Selector */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[var(--color-text-muted)] text-sm">To:</span>
+                                    <select
+                                        className="bg-slate-50 text-slate-800 text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-[var(--color-primary)] max-w-[120px]"
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setAllowedRoles([]);
+                                            setAllowedDepartments([]);
+
+                                            if (val === 'Public') {
+                                                // Default: All empty
+                                            } else if (val === 'Managers') {
+                                                setAllowedRoles(['Manager', 'Admin']);
+                                            } else if (DEPARTMENTS.includes(val)) {
+                                                setAllowedDepartments([val]);
+                                            }
+                                        }}
+                                    >
+                                        <option value="Public">Everyone</option>
+                                        <option value="Managers">Managers Only</option>
+                                        <optgroup label="Departments">
+                                            {DEPARTMENTS.map(dept => (
+                                                <option key={dept} value={dept}>{dept} Dept</option>
+                                            ))}
+                                        </optgroup>
+                                    </select>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[var(--color-text-muted)] text-sm">Tag:</span>
+                                    <select
+                                        className="bg-slate-50 text-slate-800 text-sm border border-slate-200 rounded-lg px-2 py-2 focus:outline-none focus:border-[var(--color-primary)]"
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                    >
+                                        {POST_CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Filters */}
+                        <div className="bg-white rounded-xl p-4 border border-[var(--color-border)] shadow-sm">
+                            <div className="flex items-center gap-4 flex-wrap">
+                                <span className="text-sm font-semibold text-slate-800">Filters:</span>
+
+                                {/* Category Filter */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-[var(--color-text-muted)]">Category:</span>
+                                    <select
+                                        className="bg-slate-50 text-slate-800 text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[var(--color-primary)]"
+                                        value={filterCategory}
+                                        onChange={(e) => setFilterCategory(e.target.value)}
+                                    >
+                                        <option value="All">All</option>
+                                        {POST_CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Date Filter */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-[var(--color-text-muted)]">Date:</span>
+                                    <div className="flex gap-1">
+                                        {['All', 'Today', 'Week', 'Month'].map(period => (
+                                            <button
+                                                key={period}
+                                                onClick={() => setFilterDate(period)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterDate === period
+                                                    ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                                                    : 'bg-slate-50 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200'
+                                                    }`}
+                                            >
+                                                {period}
+                                            </button>
+                                        ))}
                                     </div>
-                                    <span className="text-sm font-medium text-[var(--color-text-main)]">{c.fullName || c.username}</span>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </aside>
-            </div>
 
-            {/* Quick Chat Overlay - Restricted Mode */}
-            {activeChatUser && (
-                <div className={`fixed bottom-0 right-4 w-80 bg-[var(--color-dark-surface)] border border-[var(--color-border)] rounded-t-lg shadow-xl z-50 flex flex-col transition-all duration-300 ${activeChatUser ? 'translate-y-0' : 'translate-y-full'}`} style={{ height: 'auto', maxHeight: '400px' }}>
-                    <div className="p-3 bg-[var(--color-dark-surface-lighter)] border-b border-[var(--color-border)] flex items-center justify-between rounded-t-lg">
-                        <div className="flex items-center gap-2">
-                            <div className="user-avatar w-8 h-8 relative rounded-full bg-cover" style={{ backgroundImage: `url(${getAvatarUrl(activeChatUser)})` }}>
-                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[var(--color-dark-surface)]"></div>
-                            </div>
-                            <div>
-                                <div className="text-white font-medium text-sm">{activeChatUser.fullName || activeChatUser.username}</div>
-                                <div className="text-[10px] text-[var(--color-text-muted)]">Quick Message Only</div>
+                                {/* Active Filter Count */}
+                                {(filterCategory !== 'All' || filterDate !== 'All') && (
+                                    <button
+                                        onClick={() => {
+                                            setFilterCategory('All');
+                                            setFilterDate('All');
+                                        }}
+                                        className="text-xs text-[var(--color-primary)] hover:underline ml-auto"
+                                    >
+                                        Clear Filters
+                                    </button>
+                                )}
                             </div>
                         </div>
-                        <button onClick={() => setActiveChatUser(null)} className="text-[var(--color-text-muted)] hover:text-white">
-                            <span className="material-symbols-outlined text-lg">close</span>
-                        </button>
-                    </div>
 
-                    <div className="p-4 flex flex-col gap-3 bg-[var(--color-dark-bg)]">
-                        <div className="text-center text-[var(--color-text-muted)] text-sm mb-2">
-                            Select a message to send instantly:
-                        </div>
-                        <div className="grid grid-cols-1 gap-2">
-                            {quickActions.map((action, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => handleQuickSend(action)}
-                                    className="text-left px-4 py-3 rounded-lg bg-[var(--color-dark-surface-lighter)] text-white hover:bg-[var(--color-primary)] hover:text-white transition-colors text-sm font-medium border border-[var(--color-border)] hover:border-transparent flex items-center gap-2"
-                                >
-                                    <span>{action}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="mt-2 text-center">
-                            <button
-                                onClick={() => navigate('/chat')}
-                                className="text-xs text-[var(--color-primary)] hover:underline"
-                            >
-                                Open full chat
-                            </button>
-                        </div>
+                        {/* Posts */}
+                        {isLoading ? (
+                            <div className="flex justify-center items-center py-20">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Show "View All Posts" button when in focused mode */}
+                                {focusedPostId && (
+                                    <div className="mb-4 p-4 bg-[var(--color-dark-surface)] rounded-xl border border-[var(--color-border)] flex items-center justify-between">
+                                        <p className="text-[var(--color-text-muted)] text-sm">
+                                            Viewing single post from notification
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setFocusedPostId(null);
+                                                window.history.pushState({}, '', '/feed');
+                                            }}
+                                            className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition-colors text-sm font-medium"
+                                        >
+                                            View All Posts
+                                        </button>
+                                    </div>
+                                )}
+
+                                {(focusedPostId ? filteredPosts.filter(p => p.id === focusedPostId) : filteredPosts).map(post => (
+                                    <div
+                                        key={post.id}
+                                        id={`post-${post.id}`}
+                                        style={{
+                                            border: highlightedPostId === post.id ? '3px solid #ff4d4f' : 'none',
+                                            borderRadius: '8px',
+                                            padding: highlightedPostId === post.id ? '8px' : '0',
+                                            backgroundColor: highlightedPostId === post.id ? 'rgba(255, 77, 79, 0.05)' : 'transparent'
+                                        }}
+                                    >
+                                        {highlightedPostId === post.id && (
+                                            <div style={{
+                                                backgroundColor: '#ff4d4f',
+                                                color: 'white',
+                                                padding: '8px 12px',
+                                                borderRadius: '4px',
+                                                marginBottom: '8px',
+                                                fontWeight: 600,
+                                                textAlign: 'center'
+                                            }}>
+                                                📌 Bài viết được báo cáo
+                                            </div>
+                                        )}
+                                        <PostCard
+                                            key={post.id}
+                                            post={post}
+                                            currentUser={user}
+                                            onPostUpdated={handlePostUpdated}
+                                            onPostDeleted={handlePostDeleted}
+                                        />
+                                    </div>
+                                ))}
+                            </>
+                        )}
                     </div>
                 </div>
-            )}
+
+                {/* Chat Sidebar - right side (Always visible like Facebook) */}
+                <ChatSidebar onContactClick={handleOpenChat} />
+            </div>
+
 
             {/* Sensitive Content Warning Modal */}
             {showWarning && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100]">
-                    <div className="bg-[var(--color-dark-surface)] border-2 border-yellow-500 rounded-xl p-6 max-w-md mx-4 shadow-2xl animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[100]">
+                    <div className="bg-white border-2 border-yellow-400 rounded-2xl p-6 max-w-md mx-4 shadow-2xl animate-in fade-in zoom-in duration-200">
                         <div className="flex items-center gap-3 mb-4">
                             <span className="material-symbols-outlined text-yellow-500 text-3xl">warning</span>
-                            <h3 className="text-xl font-bold text-white">Sensitive Content Detected</h3>
+                            <h3 className="text-xl font-bold text-slate-900">Sensitive Content Detected</h3>
                         </div>
                         <p className="text-[var(--color-text-muted)] mb-4 leading-relaxed">{warningMessage}</p>
                         <p className="text-sm text-[var(--color-text-muted)] mb-6">Do you want to continue posting anyway?</p>
@@ -680,7 +555,7 @@ export default function FeedPage() {
                                     setShowWarning(false);
                                     setWarningMessage('');
                                 }}
-                                className="flex-1 px-4 py-2 bg-[var(--color-dark-bg)] text-white rounded-lg hover:bg-[var(--color-dark-surface-lighter)] transition-colors border border-[var(--color-border)]"
+                                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors border border-slate-200"
                             >
                                 Cancel
                             </button>
@@ -698,6 +573,16 @@ export default function FeedPage() {
                     </div>
                 </div>
             )}
+
+            {/* Floating Chat Windows - Render up to 3 */}
+            {openChats.map((chatUser, index) => (
+                <FloatingChat
+                    key={chatUser.id || chatUser.username}
+                    chatUser={chatUser}
+                    windowIndex={index}
+                    onClose={() => handleCloseChat(chatUser.id || chatUser.username)}
+                />
+            ))}
         </div>
     );
 }
