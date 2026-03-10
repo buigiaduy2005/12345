@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button, Upload, message, Input, Modal, Select, Popconfirm, Avatar } from 'antd';
 import {
     SearchOutlined
@@ -8,7 +8,57 @@ import BottomNavigation from '../components/BottomNavigation';
 import LeftSidebar from '../components/LeftSidebar';
 import DocViewer, { DocViewerRenderers } from "@cyntler/react-doc-viewer";
 import "@cyntler/react-doc-viewer/dist/index.css";
+import { renderAsync } from "docx-preview";
 import './LibraryPage.css';
+
+const DocxPreview = ({ fileId }: { fileId: string }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        let isMounted = true;
+
+        const loadDoc = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`${API_BASE_URL}/api/Upload/${fileId}`);
+                if (!response.ok) throw new Error('Không thể tải tài liệu');
+                const blob = await response.blob();
+
+                if (isMounted && containerRef.current) {
+                    containerRef.current.innerHTML = '';
+                    await renderAsync(blob, containerRef.current, undefined, {
+                        inWrapper: true,
+                        ignoreWidth: false,
+                        ignoreHeight: false,
+                        ignoreFonts: false,
+                        breakPages: true,
+                        ignoreLastRenderedPageBreak: true,
+                        experimental: true,
+                    });
+                }
+            } catch (err: any) {
+                console.error("Docx Preview Error:", err);
+                if (isMounted) setError(err.message || 'Lỗi khi hiển thị tài liệu');
+            } finally {
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        loadDoc();
+        return () => { isMounted = false; };
+    }, [fileId]);
+
+    return (
+        <div style={{ width: '100%', height: '100%', overflow: 'auto', backgroundColor: '#f3f4f6', position: 'relative' }}>
+            {loading && <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '10px 20px', background: 'white', borderRadius: 8, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>Đang tải...</div>}
+            {error && <div style={{ padding: 20, textAlign: 'center', color: 'red' }}>Lỗi: {error}</div>}
+            <div ref={containerRef} style={{ padding: '20px', minHeight: '100%' }} />
+        </div>
+    );
+};
 
 const { Dragger } = Upload;
 
@@ -527,24 +577,28 @@ const LibraryPage = () => {
                 destroyOnClose
             >
                 {previewingDocument && (
-                    <DocViewer
-                        documents={[
-                            {
-                                uri: `${API_BASE_URL}/api/Upload/${previewingDocument.fileId}`,
-                                fileType: previewingDocument.fileName.split('.').pop()?.toLowerCase(),
-                                fileName: previewingDocument.fileName
-                            }
-                        ]}
-                        pluginRenderers={DocViewerRenderers}
-                        style={{ height: '100%' }}
-                        config={{
-                            header: {
-                                disableHeader: true,
-                                disableFileName: true,
-                                retainURLParams: false
-                            }
-                        }}
-                    />
+                    previewingDocument.fileName.toLowerCase().endsWith('.docx') ? (
+                        <DocxPreview fileId={previewingDocument.fileId} />
+                    ) : (
+                        <DocViewer
+                            documents={[
+                                {
+                                    uri: `${API_BASE_URL}/api/Upload/${previewingDocument.fileId}`,
+                                    fileType: previewingDocument.fileName.split('.').pop()?.toLowerCase(),
+                                    fileName: previewingDocument.fileName
+                                }
+                            ]}
+                            pluginRenderers={DocViewerRenderers}
+                            style={{ height: '100%' }}
+                            config={{
+                                header: {
+                                    disableHeader: true,
+                                    disableFileName: true,
+                                    retainURLParams: false
+                                }
+                            }}
+                        />
+                    )
                 )}
             </Modal>
         </div>
