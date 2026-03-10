@@ -17,15 +17,17 @@ export default function MeetPage() {
     const user = authService.getCurrentUser();
 
     const handleJoin = () => {
-        if (!roomName.trim()) {
-            message.warning('Vui lòng nhập tên/mã phòng để tham gia!');
-            return;
+        let finalRoomName = roomName.trim();
+        if (!finalRoomName) {
+            const randomString = Math.random().toString(36).substring(2, 12);
+            finalRoomName = `InsiderThreatRoom_${randomString}`;
+            setRoomName(finalRoomName);
         }
         setInMeeting(true);
     };
 
     const generateRoomName = () => {
-        const randomString = Math.random().toString(36).substring(2, 10);
+        const randomString = Math.random().toString(36).substring(2, 12);
         setRoomName(`InsiderThreatRoom_${randomString}`);
     };
 
@@ -88,7 +90,8 @@ export default function MeetPage() {
                                     startWithAudioMuted: true,
                                     disableModeratorIndicator: true,
                                     startScreenSharing: true,
-                                    enableEmailInStats: false
+                                    enableEmailInStats: false,
+                                    prejoinPageEnabled: false
                                 }}
                                 interfaceConfigOverwrite={{
                                     DISABLE_JOIN_LEAVE_NOTIFICATIONS: true
