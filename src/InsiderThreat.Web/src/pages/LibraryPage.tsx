@@ -6,6 +6,8 @@ import {
 import { api, API_BASE_URL } from '../services/api';
 import BottomNavigation from '../components/BottomNavigation';
 import LeftSidebar from '../components/LeftSidebar';
+import DocViewer, { DocViewerRenderers } from "@cyntler/react-doc-viewer";
+import "@cyntler/react-doc-viewer/dist/index.css";
 import './LibraryPage.css';
 
 const { Dragger } = Upload;
@@ -40,6 +42,7 @@ const LibraryPage = () => {
     const [isUploadModalVisible, setIsUploadModalVisible] = useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [editingDocument, setEditingDocument] = useState<SharedDocument | null>(null);
+    const [previewingDocument, setPreviewingDocument] = useState<SharedDocument | null>(null);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const [uploadFileList, setUploadFileList] = useState<any[]>([]);
 
@@ -88,7 +91,7 @@ const LibraryPage = () => {
     };
 
     const handlePreview = (doc: SharedDocument) => {
-        window.open(`${API_BASE_URL}/api/Upload/${doc.fileId}`, '_blank');
+        setPreviewingDocument(doc);
     };
 
     const handleDelete = async (id: string) => {
@@ -510,6 +513,39 @@ const LibraryPage = () => {
                         Hủy
                     </Button>
                 </div>
+            </Modal>
+
+            {/* Preview Document Modal */}
+            <Modal
+                title={previewingDocument?.fileName}
+                open={!!previewingDocument}
+                onCancel={() => setPreviewingDocument(null)}
+                footer={null}
+                width={1000}
+                style={{ top: 20 }}
+                styles={{ body: { height: '80vh', padding: 0 } }}
+                destroyOnClose
+            >
+                {previewingDocument && (
+                    <DocViewer
+                        documents={[
+                            {
+                                uri: `${API_BASE_URL}/api/Upload/${previewingDocument.fileId}`,
+                                fileType: previewingDocument.fileName.split('.').pop()?.toLowerCase(),
+                                fileName: previewingDocument.fileName
+                            }
+                        ]}
+                        pluginRenderers={DocViewerRenderers}
+                        style={{ height: '100%' }}
+                        config={{
+                            header: {
+                                disableHeader: true,
+                                disableFileName: true,
+                                retainURLParams: false
+                            }
+                        }}
+                    />
+                )}
             </Modal>
         </div>
     );
