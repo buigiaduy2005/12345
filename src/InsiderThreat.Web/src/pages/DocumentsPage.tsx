@@ -41,7 +41,7 @@ function DocumentsPage() {
             )
         },
         {
-            title: 'Máy tính',
+            title: 'Tài khoản / Máy tính',
             dataIndex: 'computerName',
             key: 'computerName',
         },
