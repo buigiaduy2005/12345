@@ -269,7 +269,10 @@ function DashboardPage() {
                         className="trigger"
                     />
 
-                    <div className="header-right">
+                    <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <Button type="primary" onClick={() => setSelectedKey('attendance')}>
+                            Điểm danh chấm công
+                        </Button>
                         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
                             <div className="user-info">
                                 <Avatar icon={<UserOutlined />} />
