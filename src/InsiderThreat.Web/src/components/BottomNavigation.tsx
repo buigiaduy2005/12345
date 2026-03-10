@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { message } from 'antd';
+import { authService } from '../services/auth';
 import { attendanceService } from '../services/attendanceService';
 import styles from './BottomNavigation.module.css';
 
@@ -21,8 +22,12 @@ export default function BottomNavigation({ items, activeKey }: BottomNavigationP
     const navigate = useNavigate();
     const location = useLocation();
 
+    const user = authService.getCurrentUser();
+    const isAdmin = user?.role?.toLowerCase().includes('admin') ||
+        user?.username?.toLowerCase() === 'admin';
+
     const defaultItems: NavItem[] = [
-        { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
+        ...(isAdmin ? [{ icon: 'dashboard', label: 'Dashboard', path: '/dashboard' }] : []),
         { icon: 'newspaper', label: 'Bảng tin', path: '/feed' },
         { icon: 'group', label: 'Nhân sự', path: '/staff' },
         { icon: 'folder', label: 'Kho tài liệu', path: '/library' },
