@@ -52,6 +52,21 @@ export const chatService = {
         return await api.put(`/api/users/${userId}/public-key`, publicKey);
     },
 
+    // Delete message for everyone
+    deleteForEveryone: async (messageId: string) => {
+        return await api.delete(`/api/messages/${messageId}/for-everyone`);
+    },
+
+    // Delete message for me
+    deleteForMe: async (messageId: string) => {
+        return await api.delete(`/api/messages/${messageId}/for-me`);
+    },
+
+    // Edit message
+    editMessage: async (messageId: string, content: string) => {
+        return await api.put(`/api/messages/${messageId}/edit`, { content });
+    },
+
     // Get User Public Key
     getUserPublicKey: async (userId: string) => {
         const user = await api.get<any>(`/api/users/${userId}`); // Assuming getting user returns user obj

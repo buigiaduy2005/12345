@@ -32,6 +32,7 @@ interface Message {
     attachmentType?: string;
     attachmentName?: string;
     isRead?: boolean;
+    isEdited?: boolean;
 }
 
 export default function ChatPage() {
@@ -58,6 +59,12 @@ export default function ChatPage() {
 
     // Search State
     const [searchTerm, setSearchTerm] = useState("");
+
+    // Long-press context menu state
+    const [contextMenu, setContextMenu] = useState<{ msgId: string; x: number; y: number } | null>(null);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [editingText, setEditingText] = useState('');
+    const longPressTimer = useRef<number | null>(null);
 
     // Filtered Content for Popover
     const filteredContent = useMemo(() => {
@@ -321,6 +328,83 @@ export default function ChatPage() {
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') handleSendMessage();
+    };
+
+    // ===== Long-press context menu handlers =====
+    const handleTouchStart = (msgId: string, e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        const x = touch.clientX;
+        const y = touch.clientY;
+        longPressTimer.current = window.setTimeout(() => {
+            setContextMenu({ msgId, x, y });
+        }, 600);
+    };
+
+    const handleTouchEnd = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const handleTouchMove = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const closeContextMenu = () => setContextMenu(null);
+
+    const handleDeleteForEveryone = async () => {
+        if (!contextMenu) return;
+        try {
+            await chatService.deleteForEveryone(contextMenu.msgId);
+            setMessages(prev => prev.filter(m => m.id !== contextMenu.msgId));
+        } catch (err) {
+            console.error('Delete for everyone failed', err);
+        }
+        closeContextMenu();
+    };
+
+    const handleDeleteForMe = async () => {
+        if (!contextMenu) return;
+        try {
+            await chatService.deleteForMe(contextMenu.msgId);
+            setMessages(prev => prev.filter(m => m.id !== contextMenu.msgId));
+        } catch (err) {
+            console.error('Delete for me failed', err);
+        }
+        closeContextMenu();
+    };
+
+    const handleStartEdit = () => {
+        if (!contextMenu) return;
+        const msg = messages.find(m => m.id === contextMenu.msgId);
+        if (msg) {
+            setEditingMessageId(msg.id);
+            setEditingText(msg.text);
+        }
+        closeContextMenu();
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingMessageId || !editingText.trim()) return;
+        try {
+            await chatService.editMessage(editingMessageId, editingText.trim());
+            setMessages(prev => prev.map(m =>
+                m.id === editingMessageId ? { ...m, text: editingText.trim(), isEdited: true } : m
+            ));
+        } catch (err) {
+            console.error('Edit message failed', err);
+        }
+        setEditingMessageId(null);
+        setEditingText('');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingMessageId(null);
+        setEditingText('');
     };
 
     const handleLogout = () => {
@@ -606,7 +690,28 @@ export default function ChatPage() {
                                     const isLastReadMessage = isMe && msg.isRead && !messages.slice(index + 1).some(m => m.senderId === currentUser?.id && m.isRead);
 
                                     return (
-                                        <div key={msg.id} className={`message-group ${isMe ? 'sent' : 'received'}`}>
+                                        <div
+                                            key={msg.id}
+                                            className={`message-group ${isMe ? 'sent' : 'received'}`}
+                                            onTouchStart={(e) => handleTouchStart(msg.id, e)}
+                                            onTouchEnd={handleTouchEnd}
+                                            onTouchMove={handleTouchMove}
+                                            onContextMenu={(e) => { e.preventDefault(); setContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); }}
+                                        >
+                                            {/* Desktop: nút 3 chấm bên trái (tin nhắn sent) */}
+                                            {isMe && (
+                                                <button
+                                                    className="msg-more-btn desktop-only"
+                                                    onClick={(e) => { e.stopPropagation(); setContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); }}
+                                                    title="Tùy chọn"
+                                                >
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                                        <circle cx="12" cy="5" r="2"/>
+                                                        <circle cx="12" cy="12" r="2"/>
+                                                        <circle cx="12" cy="19" r="2"/>
+                                                    </svg>
+                                                </button>
+                                            )}
                                             {!isMe && (
                                                 <div className="user-avatar" style={{
                                                     width: 28, height: 28, borderRadius: '50%',
@@ -618,10 +723,29 @@ export default function ChatPage() {
                                                 }}></div>
                                             )}
                                             <div className="message-content" style={{ maxWidth: '70%', display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                                                {/* Inline Edit Mode */}
+                                                {editingMessageId === msg.id ? (
+                                                    <div className="message-edit-inline">
+                                                        <input
+                                                            type="text"
+                                                            value={editingText}
+                                                            onChange={(e) => setEditingText(e.target.value)}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') handleCancelEdit(); }}
+                                                            autoFocus
+                                                            className="message-edit-input"
+                                                        />
+                                                        <div className="message-edit-actions">
+                                                            <button onClick={handleSaveEdit} className="edit-save-btn">Lưu</button>
+                                                            <button onClick={handleCancelEdit} className="edit-cancel-btn">Hủy</button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                <>
                                                 {/* Text Message */}
                                                 {(msg.text && !msg.text.startsWith('[Sent a')) && (
                                                     <div className="message-bubble" style={{ width: 'fit-content', wordBreak: 'break-word', marginTop: msg.attachmentUrl ? 8 : 0 }}>
                                                         {msg.text}
+                                                        {msg.isEdited && <span className="message-edited-label">(đã chỉnh sửa)</span>}
                                                     </div>
                                                 )}
 
@@ -681,12 +805,59 @@ export default function ChatPage() {
                                                         Đã xem
                                                     </div>
                                                 )}
+                                                </>
+                                                )}
                                             </div>
+                                            {/* Desktop: nút 3 chấm bên phải (tin nhắn received) */}
+                                            {!isMe && (
+                                                <button
+                                                    className="msg-more-btn desktop-only"
+                                                    onClick={(e) => { e.stopPropagation(); setContextMenu({ msgId: msg.id, x: e.clientX, y: e.clientY }); }}
+                                                    title="Tùy chọn"
+                                                >
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                                        <circle cx="12" cy="5" r="2"/>
+                                                        <circle cx="12" cy="12" r="2"/>
+                                                        <circle cx="12" cy="19" r="2"/>
+                                                    </svg>
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })}
                                 <div ref={messagesEndRef} />
                             </div>
+
+                            {/* Context Menu Popup */}
+                            {contextMenu && (
+                                <>
+                                    <div className="context-menu-overlay" onClick={closeContextMenu} />
+                                    <div
+                                        className="context-menu-popup"
+                                        style={{
+                                            top: Math.min(contextMenu.y, window.innerHeight - 180),
+                                            left: Math.min(contextMenu.x, window.innerWidth - 200),
+                                        }}
+                                    >
+                                        {messages.find(m => m.id === contextMenu.msgId)?.senderId === currentUser?.id && (
+                                            <>
+                                                <button className="context-menu-item" onClick={handleDeleteForEveryone}>
+                                                    <span className="context-menu-icon">🗑️</span>
+                                                    Xóa với mọi người
+                                                </button>
+                                                <button className="context-menu-item" onClick={handleStartEdit}>
+                                                    <span className="context-menu-icon">✏️</span>
+                                                    Chỉnh sửa tin nhắn
+                                                </button>
+                                            </>
+                                        )}
+                                        <button className="context-menu-item" onClick={handleDeleteForMe}>
+                                            <span className="context-menu-icon">🚫</span>
+                                            Xóa ở phía tôi
+                                        </button>
+                                    </div>
+                                </>
+                            )}
 
                             <div className="chat-input-area">
                                 <div className="chat-input-wrapper">

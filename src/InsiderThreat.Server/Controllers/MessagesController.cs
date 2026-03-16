@@ -101,6 +101,9 @@ public class MessagesController : ControllerBase
         var sort = Builders<Message>.Sort.Ascending(m => m.Timestamp);
         var messages = await _messagesCollection.Find(filter).Sort(sort).ToListAsync();
 
+        // Filter out messages deleted for this user
+        messages = messages.Where(m => m.DeletedFor == null || !m.DeletedFor.Contains(currentUserId)).ToList();
+
         // Decrypt content before returning to client
         var decrypted = messages.Select(CloneDecrypted).ToList();
         return Ok(decrypted);
@@ -191,6 +194,60 @@ public class MessagesController : ControllerBase
         return NoContent();
     }
 
+    // DELETE: api/messages/{id}/for-everyone
+    [HttpDelete("{id}/for-everyone")]
+    public async Task<IActionResult> DeleteForEveryone(string id)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var msg = await _messagesCollection.Find(m => m.Id == id).FirstOrDefaultAsync();
+        if (msg == null) return NotFound();
+        if (msg.SenderId != userId) return Forbid();
+
+        await _messagesCollection.DeleteOneAsync(m => m.Id == id);
+        return NoContent();
+    }
+
+    // DELETE: api/messages/{id}/for-me
+    [HttpDelete("{id}/for-me")]
+    public async Task<IActionResult> DeleteForMe(string id)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var msg = await _messagesCollection.Find(m => m.Id == id).FirstOrDefaultAsync();
+        if (msg == null) return NotFound();
+
+        var update = Builders<Message>.Update.AddToSet(m => m.DeletedFor, userId);
+        await _messagesCollection.UpdateOneAsync(m => m.Id == id, update);
+        return NoContent();
+    }
+
+    // PUT: api/messages/{id}/edit
+    [HttpPut("{id}/edit")]
+    public async Task<IActionResult> EditMessage(string id, [FromBody] EditMessageRequest request)
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var msg = await _messagesCollection.Find(m => m.Id == id).FirstOrDefaultAsync();
+        if (msg == null) return NotFound();
+        if (msg.SenderId != userId) return Forbid();
+
+        var encryptedContent = _encryption.Encrypt(request.Content);
+        var update = Builders<Message>.Update
+            .Set(m => m.Content, encryptedContent)
+            .Set(m => m.IsEdited, true);
+        await _messagesCollection.UpdateOneAsync(m => m.Id == id, update);
+        return Ok(new { success = true });
+    }
+
+    public class EditMessageRequest
+    {
+        public string Content { get; set; } = string.Empty;
+    }
+
     // ---- Helper ----
     private Message CloneDecrypted(Message msg)
     {
@@ -205,7 +262,8 @@ public class MessagesController : ControllerBase
             AttachmentType = msg.AttachmentType,
             AttachmentName = msg.AttachmentName,
             Timestamp = msg.Timestamp,
-            IsRead = msg.IsRead
+            IsRead = msg.IsRead,
+            IsEdited = msg.IsEdited
         };
     }
 }
