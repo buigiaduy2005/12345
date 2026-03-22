@@ -22,6 +22,7 @@ export default function MeetPage() {
     const {
         localStream, peers, roomCode, isConnected,
         isAudioEnabled, isVideoEnabled, isScreenSharing,
+        peerUpdateCounter,
         createRoom, joinRoom, leaveRoom,
         toggleAudio, toggleVideo, toggleScreenShare,
     } = useWebRTC();
@@ -181,7 +182,7 @@ export default function MeetPage() {
 
                                 {/* Remote Videos */}
                                 {Array.from(peers.values()).map(peer => (
-                                    <RemoteVideo key={peer.connectionId} peer={peer} />
+                                    <RemoteVideo key={peer.connectionId} peer={peer} streamId={peer.remoteStream.id} />
                                 ))}
                             </div>
 
@@ -242,7 +243,7 @@ export default function MeetPage() {
 }
 
 /* Remote video component - uses useEffect to update srcObject when stream changes */
-function RemoteVideo({ peer }: { peer: { connectionId: string; displayName: string; remoteStream: MediaStream } }) {
+function RemoteVideo({ peer, streamId: _streamId }: { peer: { connectionId: string; displayName: string; remoteStream: MediaStream }; streamId?: string }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [, forceUpdate] = useState(0);
 
