@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Typography, Card, Input, Button, Space, message, Layout, Tag, Tooltip } from 'antd';
 import {
     VideoCameraOutlined, EnterOutlined, ApiOutlined,
@@ -17,7 +17,6 @@ const { Content } = Layout;
 export default function MeetPage() {
     const [inputCode, setInputCode] = useState('');
     const [loading, setLoading] = useState(false);
-    const localVideoRef = useRef<HTMLVideoElement>(null);
     const user = authService.getCurrentUser();
 
     const {
@@ -27,10 +26,10 @@ export default function MeetPage() {
         toggleAudio, toggleVideo, toggleScreenShare,
     } = useWebRTC();
 
-    // Attach local stream to video element
-    useEffect(() => {
-        if (localVideoRef.current && localStream) {
-            localVideoRef.current.srcObject = localStream;
+    // Callback ref to attach local stream to video element
+    const localVideoRef = useCallback((node: HTMLVideoElement | null) => {
+        if (node && localStream) {
+            node.srcObject = localStream;
         }
     }, [localStream]);
 
@@ -241,11 +240,9 @@ export default function MeetPage() {
 
 /* Remote video component - handles srcObject assignment */
 function RemoteVideo({ peer }: { peer: { connectionId: string; displayName: string; remoteStream: MediaStream } }) {
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    useEffect(() => {
-        if (videoRef.current) {
-            videoRef.current.srcObject = peer.remoteStream;
+    const videoRef = useCallback((node: HTMLVideoElement | null) => {
+        if (node) {
+            node.srcObject = peer.remoteStream;
         }
     }, [peer.remoteStream]);
 

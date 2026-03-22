@@ -67,8 +67,7 @@
     background: #1a1a1a;
     border-radius: 10px;
     overflow: hidden;
-    aspect-ratio: 16 / 9;
-    min-height: 180px;
+    min-height: 200px;
 }
 
 .videoElement {
