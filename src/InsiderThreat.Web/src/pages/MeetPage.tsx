@@ -1,8 +1,12 @@
-import { useState } from 'react';
-import { Typography, Card, Input, Button, Space, message, Layout } from 'antd';
-import { VideoCameraOutlined, EnterOutlined, ApiOutlined } from '@ant-design/icons';
-import { JitsiMeeting } from '@jitsi/react-sdk';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { Typography, Card, Input, Button, Space, message, Layout, Tag, Tooltip } from 'antd';
+import {
+    VideoCameraOutlined, EnterOutlined, ApiOutlined,
+    AudioOutlined, AudioMutedOutlined, DesktopOutlined,
+    PhoneOutlined, CopyOutlined, VideoCameraAddOutlined,
+} from '@ant-design/icons';
 import { authService } from '../services/auth';
+import { useWebRTC } from '../hooks/useWebRTC';
 import LeftSidebar from '../components/LeftSidebar';
 import BottomNavigation from '../components/BottomNavigation';
 import styles from './MeetPage.module.css';
@@ -11,25 +15,65 @@ const { Title, Text } = Typography;
 const { Content } = Layout;
 
 export default function MeetPage() {
-    const [roomName, setRoomName] = useState('');
-    const [inMeeting, setInMeeting] = useState(false);
-
+    const [inputCode, setInputCode] = useState('');
+    const [loading, setLoading] = useState(false);
+    const localVideoRef = useRef<HTMLVideoElement>(null);
     const user = authService.getCurrentUser();
 
-    const handleJoin = () => {
-        let finalRoomName = roomName.trim();
-        if (!finalRoomName) {
-            const randomString = Math.random().toString(36).substring(2, 12);
-            finalRoomName = `InsiderThreatRoom_${randomString}`;
-            setRoomName(finalRoomName);
-        }
-        setInMeeting(true);
-    };
+    const {
+        localStream, peers, roomCode, isConnected,
+        isAudioEnabled, isVideoEnabled, isScreenSharing,
+        createRoom, joinRoom, leaveRoom,
+        toggleAudio, toggleVideo, toggleScreenShare,
+    } = useWebRTC();
 
-    const generateRoomName = () => {
-        const randomString = Math.random().toString(36).substring(2, 12);
-        setRoomName(`InsiderThreatRoom_${randomString}`);
-    };
+    // Attach local stream to video element
+    useEffect(() => {
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+        }
+    }, [localStream]);
+
+    const handleCreateRoom = useCallback(async () => {
+        setLoading(true);
+        try {
+            const code = await createRoom();
+            message.success(`Đã tạo phòng: ${code}`);
+        } catch (err: any) {
+            message.error(err?.message || 'Không thể tạo phòng');
+        }
+        setLoading(false);
+    }, [createRoom]);
+
+    const handleJoinRoom = useCallback(async () => {
+        const code = inputCode.trim().toUpperCase();
+        if (!code) {
+            message.warning('Vui lòng nhập mã phòng');
+            return;
+        }
+        setLoading(true);
+        try {
+            await joinRoom(code);
+            message.success('Đã tham gia phòng');
+        } catch (err: any) {
+            message.error(err?.message || 'Không thể tham gia phòng');
+        }
+        setLoading(false);
+    }, [inputCode, joinRoom]);
+
+    const handleLeave = useCallback(() => {
+        leaveRoom();
+        message.info('Đã rời phòng');
+    }, [leaveRoom]);
+
+    const copyRoomCode = useCallback(() => {
+        if (roomCode) {
+            navigator.clipboard.writeText(roomCode);
+            message.success('Đã sao chép mã phòng');
+        }
+    }, [roomCode]);
+
+    const inMeeting = isConnected && roomCode;
 
     return (
         <Layout className={styles.layout}>
@@ -38,76 +82,151 @@ export default function MeetPage() {
             </div>
 
             <Content className={styles.mainContent}>
-                <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: 16, height: '100%', display: 'flex', flexDirection: 'column' }}>
                     {!inMeeting ? (
-                        <div style={{ maxWidth: 600, margin: '0 auto', marginTop: 100, width: '100%' }}>
+                        /* ========== LOBBY ========== */
+                        <div style={{ maxWidth: 600, margin: '0 auto', marginTop: 80, width: '100%' }}>
                             <Card
-                                title={<><VideoCameraOutlined style={{ color: '#1890ff', marginRight: 8 }} /> Tham Gia Trực Tuyến (Meet)</>}
+                                title={<><VideoCameraOutlined style={{ color: '#1890ff', marginRight: 8 }} /> Phòng Họp Trực Tuyến</>}
                                 bordered={false}
                                 style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                             >
                                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
                                     <ApiOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
                                     <Title level={4}>Kết nối với đồng nghiệp của bạn</Title>
-                                    <Text type="secondary">Nhập mã phòng có sẵn để tham gia, hoặc tạo phòng ngẫu nhiên mới và chia sẻ mã này cho người khác.</Text>
+                                    <Text type="secondary">
+                                        Tạo phòng mới và chia sẻ mã cho người khác, hoặc nhập mã phòng để tham gia.
+                                    </Text>
                                 </div>
 
                                 <Space direction="vertical" style={{ width: '100%' }} size="large">
                                     <Input
                                         size="large"
-                                        placeholder="Nhập mã phòng ví dụ: ThuongDinhTeam"
-                                        value={roomName}
-                                        onChange={(e) => setRoomName(e.target.value)}
+                                        placeholder="Nhập mã phòng (VD: ABC123)"
+                                        value={inputCode}
+                                        onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                                         prefix={<VideoCameraOutlined />}
-                                        onPressEnter={handleJoin}
+                                        onPressEnter={handleJoinRoom}
+                                        maxLength={6}
+                                        style={{ textTransform: 'uppercase', letterSpacing: 4, fontWeight: 'bold', textAlign: 'center' }}
                                     />
 
                                     <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
                                         <Button
                                             size="large"
-                                            onClick={generateRoomName}
+                                            icon={<VideoCameraAddOutlined />}
+                                            onClick={handleCreateRoom}
+                                            loading={loading}
                                         >
-                                            Tạo mã phòng ngẫu nhiên
+                                            Tạo phòng mới
                                         </Button>
                                         <Button
                                             type="primary"
                                             size="large"
                                             icon={<EnterOutlined />}
-                                            onClick={handleJoin}
+                                            onClick={handleJoinRoom}
+                                            loading={loading}
+                                            disabled={!inputCode.trim()}
                                         >
-                                            Tham gia ngay
+                                            Tham gia
                                         </Button>
                                     </div>
                                 </Space>
                             </Card>
                         </div>
                     ) : (
-                        <div style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, overflow: 'hidden' }}>
-                            <JitsiMeeting
-                                domain="meet.jit.si"
-                                roomName={roomName}
-                                configOverwrite={{
-                                    startWithAudioMuted: true,
-                                    disableModeratorIndicator: true,
-                                    startScreenSharing: true,
-                                    enableEmailInStats: false,
-                                    prejoinPageEnabled: false
-                                }}
-                                interfaceConfigOverwrite={{
-                                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true
-                                }}
-                                userInfo={{
-                                    displayName: user?.username || 'Guest',
-                                    email: user?.email || ''
-                                }}
-                                onApiReady={(_externalApi) => {
-                                    // You can add event listeners here
-                                }}
-                                getIFrameRef={(iframeRef) => {
-                                    iframeRef.style.height = '100%';
-                                    iframeRef.style.width = '100%';
-                                }}
-                            />
+                        /* ========== IN MEETING ========== */
+                        <div className={styles.meetingContainer}>
+                            {/* Room Info Bar */}
+                            <div className={styles.roomInfoBar}>
+                                <span>Mã phòng: </span>
+                                <Tag color="blue" style={{ fontSize: 16, padding: '2px 12px', letterSpacing: 3, fontWeight: 'bold' }}>
+                                    {roomCode}
+                                </Tag>
+                                <Tooltip title="Sao chép mã phòng">
+                                    <Button
+                                        type="text"
+                                        icon={<CopyOutlined />}
+                                        onClick={copyRoomCode}
+                                        size="small"
+                                    />
+                                </Tooltip>
+                                <span style={{ marginLeft: 'auto', color: '#999', fontSize: 13 }}>
+                                    {peers.size + 1} người tham gia
+                                </span>
+                            </div>
+
+                            {/* Video Grid */}
+                            <div className={styles.videoGrid}>
+                                {/* Local Video */}
+                                <div className={styles.videoTile}>
+                                    <video
+                                        ref={localVideoRef}
+                                        autoPlay
+                                        muted
+                                        playsInline
+                                        className={styles.videoElement}
+                                    />
+                                    {!isVideoEnabled && (
+                                        <div className={styles.videoOff}>
+                                            <VideoCameraOutlined style={{ fontSize: 36, color: '#fff' }} />
+                                        </div>
+                                    )}
+                                    <span className={styles.nameTag}>
+                                        {user?.fullName || user?.username || 'Bạn'} (Bạn)
+                                    </span>
+                                </div>
+
+                                {/* Remote Videos */}
+                                {Array.from(peers.values()).map(peer => (
+                                    <RemoteVideo key={peer.connectionId} peer={peer} />
+                                ))}
+                            </div>
+
+                            {/* Control Bar */}
+                            <div className={styles.controlBar}>
+                                <Tooltip title={isAudioEnabled ? 'Tắt mic' : 'Bật mic'}>
+                                    <Button
+                                        shape="circle"
+                                        size="large"
+                                        icon={isAudioEnabled ? <AudioOutlined /> : <AudioMutedOutlined />}
+                                        onClick={toggleAudio}
+                                        danger={!isAudioEnabled}
+                                        className={styles.controlBtn}
+                                    />
+                                </Tooltip>
+                                <Tooltip title={isVideoEnabled ? 'Tắt camera' : 'Bật camera'}>
+                                    <Button
+                                        shape="circle"
+                                        size="large"
+                                        icon={<VideoCameraOutlined />}
+                                        onClick={toggleVideo}
+                                        danger={!isVideoEnabled}
+                                        className={styles.controlBtn}
+                                    />
+                                </Tooltip>
+                                <Tooltip title={isScreenSharing ? 'Dừng chia sẻ' : 'Chia sẻ màn hình'}>
+                                    <Button
+                                        shape="circle"
+                                        size="large"
+                                        icon={<DesktopOutlined />}
+                                        onClick={toggleScreenShare}
+                                        type={isScreenSharing ? 'primary' : 'default'}
+                                        className={styles.controlBtn}
+                                    />
+                                </Tooltip>
+                                <Tooltip title="Rời phòng">
+                                    <Button
+                                        shape="circle"
+                                        size="large"
+                                        icon={<PhoneOutlined style={{ transform: 'rotate(135deg)' }} />}
+                                        onClick={handleLeave}
+                                        danger
+                                        type="primary"
+                                        className={styles.controlBtn}
+                                    />
+                                </Tooltip>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -117,5 +236,28 @@ export default function MeetPage() {
                 <BottomNavigation />
             </div>
         </Layout>
+    );
+}
+
+/* Remote video component - handles srcObject assignment */
+function RemoteVideo({ peer }: { peer: { connectionId: string; displayName: string; remoteStream: MediaStream } }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.srcObject = peer.remoteStream;
+        }
+    }, [peer.remoteStream]);
+
+    return (
+        <div className={styles.videoTile}>
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className={styles.videoElement}
+            />
+            <span className={styles.nameTag}>{peer.displayName}</span>
+        </div>
     );
 }

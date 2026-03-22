@@ -204,6 +204,7 @@ app.MapGet("/test-db", (IMongoDatabase db) =>
 app.MapHub<InsiderThreat.Server.Hubs.SystemHub>("/hubs/system");
 app.MapHub<InsiderThreat.Server.Hubs.ChatHub>("/hubs/chat");
 app.MapHub<InsiderThreat.Server.Hubs.NotificationHub>("/hubs/notifications");
+app.MapHub<InsiderThreat.Server.Hubs.VideoHub>("/hubs/video");
 
 app.MapControllers();
 app.Run();
