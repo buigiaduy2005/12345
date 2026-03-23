@@ -78,6 +78,7 @@ interface SharedDocument {
     description?: string;
     minimumRole: string;
     allowedUserIds?: string[];
+    allowedDownloadUserIds?: string[];
     requireCamera?: boolean;
     requireWatermark?: boolean;
 }
@@ -107,6 +108,7 @@ const LibraryPage = () => {
     const [description, setDescription] = useState('');
     const [minRole, setMinRole] = useState('Nhân viên');
     const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+    const [selectedDownloadUserIds, setSelectedDownloadUserIds] = useState<string[]>([]);
     const [requireCamera, setRequireCamera] = useState(true);
     const [requireWatermark, setRequireWatermark] = useState(true);
 
@@ -169,6 +171,7 @@ const LibraryPage = () => {
         setEditingDocument(doc);
         setMinRole(doc.minimumRole);
         setSelectedUserIds(doc.allowedUserIds || []);
+        setSelectedDownloadUserIds(doc.allowedDownloadUserIds || []);
         setRequireCamera(doc.requireCamera ?? true);
         setRequireWatermark(doc.requireWatermark ?? true);
         setIsEditModalVisible(true);
@@ -182,6 +185,7 @@ const LibraryPage = () => {
             await api.put(`/api/DocumentLibrary/${editingDocument.id}/permissions`, {
                 minimumRole: minRole,
                 allowedUserIds: selectedUserIds,
+                allowedDownloadUserIds: selectedDownloadUserIds,
                 requireCamera,
                 requireWatermark
             });
@@ -236,6 +240,7 @@ const LibraryPage = () => {
             description,
             minimumRole: minRole,
             allowedUserIdsJson: JSON.stringify(selectedUserIds),
+            allowedDownloadUserIdsJson: JSON.stringify(selectedDownloadUserIds),
             requireCamera,
             requireWatermark
         },
@@ -250,6 +255,7 @@ const LibraryPage = () => {
                 setUploadFileList([]);
                 setDescription('');
                 setSelectedUserIds([]);
+                setSelectedDownloadUserIds([]);
                 setMinRole('Nhân viên');
                 setRequireCamera(true);
                 setRequireWatermark(true);
@@ -318,6 +324,12 @@ const LibraryPage = () => {
                             {filteredDocs.map(doc => {
                                 const iconData = getFileIconColor(doc.fileName);
                                 const badgeStyle = getRoleBadgeStyle(doc.minimumRole);
+                                
+                                // Quyền tản xuống: Admin, Người tạo file, hoặc những người có trong danh sách AllowedDownloadUserIds
+                                const canDownload = user.role?.toLowerCase() === 'admin' || 
+                                                    doc.uploaderId === user.id || 
+                                                    (doc.allowedDownloadUserIds && doc.allowedDownloadUserIds.includes(user.id));
+
                                 return (
                                     <div key={doc.id} className="doc-card">
                                         <div className="doc-card-header">
@@ -346,9 +358,11 @@ const LibraryPage = () => {
                                         </div>
 
                                         <div className="doc-actions">
-                                            <button className="doc-action-btn" onClick={() => handleDownload(doc)}>
-                                                <span className="material-symbols-outlined">download</span>
-                                            </button>
+                                            {canDownload && (
+                                                <button className="doc-action-btn" onClick={() => handleDownload(doc)} title={t('library.tooltip_download', "Tải xuống")}>
+                                                    <span className="material-symbols-outlined">download</span>
+                                                </button>
+                                            )}
                                             {user.role?.toLowerCase() === 'admin' && (
                                                 <button className="doc-action-btn" onClick={() => handleOpenEditModal(doc)}>
                                                     <span className="material-symbols-outlined">edit</span>
@@ -451,6 +465,25 @@ const LibraryPage = () => {
                             placeholder={t('library.viewers_placeholder', "Chọn người được phép xem...")}
                             value={selectedUserIds}
                             onChange={ids => setSelectedUserIds(ids)}
+                            getPopupContainer={triggerNode => triggerNode.parentElement}
+                            options={allUsers.map(u => ({
+                                value: u.id,
+                                label: `${u.fullName} (${u.username})`
+                            }))}
+                            filterOption={(input, option) =>
+                                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        />
+                    </div>
+
+                    <div className="upload-field">
+                        <label className="field-label">Người được tải xuống (Tùy chọn)</label>
+                        <Select
+                            mode="multiple"
+                            className="mobile-select"
+                            placeholder="Người được phép tải xuống..."
+                            value={selectedDownloadUserIds}
+                            onChange={ids => setSelectedDownloadUserIds(ids)}
                             getPopupContainer={triggerNode => triggerNode.parentElement}
                             options={allUsers.map(u => ({
                                 value: u.id,
@@ -567,6 +600,25 @@ const LibraryPage = () => {
                             placeholder={t('library.viewers_placeholder', "Chọn người được phép xem...")}
                             value={selectedUserIds}
                             onChange={ids => setSelectedUserIds(ids)}
+                            getPopupContainer={triggerNode => triggerNode.parentElement}
+                            options={allUsers.map(u => ({
+                                value: u.id,
+                                label: `${u.fullName} (${u.username})`
+                            }))}
+                            filterOption={(input, option) =>
+                                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        />
+                    </div>
+
+                    <div className="upload-field">
+                        <label className="field-label">Người được tải xuống (Tùy chọn)</label>
+                        <Select
+                            mode="multiple"
+                            className="mobile-select"
+                            placeholder="Người được phép tải xuống..."
+                            value={selectedDownloadUserIds}
+                            onChange={ids => setSelectedDownloadUserIds(ids)}
                             getPopupContainer={triggerNode => triggerNode.parentElement}
                             options={allUsers.map(u => ({
                                 value: u.id,
