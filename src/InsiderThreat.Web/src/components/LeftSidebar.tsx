@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { message } from 'antd';
+import { message, Modal } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../services/auth';
 import { attendanceService } from '../services/attendanceService';
@@ -33,8 +33,17 @@ export default function LeftSidebar() {
     ];
 
     const handleLogout = () => {
-        authService.logout();
-        navigate('/login');
+        Modal.confirm({
+            title: t('nav.logout_confirm_title', 'Xác nhận Đăng xuất'),
+            content: t('nav.logout_confirm_desc', 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?'),
+            okText: t('nav.logout_confirm_ok', 'Đăng xuất'),
+            cancelText: t('nav.logout_confirm_cancel', 'Hủy'),
+            okButtonProps: { danger: true },
+            onOk: () => {
+                authService.logout();
+                navigate('/login');
+            }
+        });
     };
 
     return (
