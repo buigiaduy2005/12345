@@ -477,8 +477,8 @@ export default function FeedPage() {
                                     </div>
 
                                     {/* Add to Post Bar — merged photo+video, no emoji */}
-                                    <div className="mx-5 mb-4 border border-slate-200 rounded-xl px-4 py-3 flex items-center justify-between">
-                                        <span className="text-slate-500 text-sm font-medium">Thêm vào bài viết</span>
+                                    <div className="mx-5 mb-4 border border-[var(--color-border)] bg-[var(--color-surface-lighter)]/30 rounded-xl px-4 py-3 flex items-center justify-between">
+                                        <span className="text-[var(--color-text-muted)] text-sm font-medium">Thêm vào bài viết</span>
                                         <div className="flex items-center gap-2">
                                             {/* Merged Photo + Video button */}
                                             <input
@@ -504,7 +504,7 @@ export default function FeedPage() {
                                     {/* Visibility + Category */}
                                     <div className="flex items-center gap-2 px-5 pb-4">
                                         <select
-                                            className="flex-1 bg-slate-50 text-slate-700 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 cursor-pointer"
+                                            className="flex-1 bg-[var(--color-surface-lighter)] text-[var(--color-text-main)] text-sm border border-[var(--color-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 cursor-pointer"
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 setAllowedRoles([]);
@@ -518,7 +518,7 @@ export default function FeedPage() {
                                             {DEPARTMENTS.map(d => <option key={d} value={d}>🏢 {d}</option>)}
                                         </select>
                                         <select
-                                            className="flex-1 bg-slate-50 text-slate-700 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 cursor-pointer"
+                                            className="flex-1 bg-[var(--color-surface-lighter)] text-[var(--color-text-main)] text-sm border border-[var(--color-border)] rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 cursor-pointer"
                                             value={selectedCategory}
                                             onChange={(e) => setSelectedCategory(e.target.value)}
                                         >
@@ -534,9 +534,9 @@ export default function FeedPage() {
                                             className="w-full py-3 rounded-xl font-bold text-[15px] tracking-wide transition-all duration-300"
                                             style={{
                                                 background: (!newPostContent.trim() && !selectedFile)
-                                                    ? '#e2e8f0'
+                                                    ? 'var(--color-surface-lighter)'
                                                     : 'linear-gradient(135deg,#1e40af,#3b82f6)',
-                                                color: (!newPostContent.trim() && !selectedFile) ? '#94a3b8' : '#fff',
+                                                color: (!newPostContent.trim() && !selectedFile) ? 'var(--color-text-muted)' : '#fff',
                                                 cursor: (!newPostContent.trim() && !selectedFile) ? 'not-allowed' : 'pointer',
                                                 boxShadow: (!newPostContent.trim() && !selectedFile) ? 'none' : '0 4px 15px rgba(37,99,235,0.35)',
                                             }}

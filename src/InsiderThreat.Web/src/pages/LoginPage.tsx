@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Card, message, Typography, Alert } from 'antd';
 import { UserOutlined, LockOutlined, ScanOutlined } from '@ant-design/icons';
 import { authService } from '../services/auth';
+import ThemeToggle from '../components/ThemeToggle';
+import Logo from '../components/Logo';
+import { useTheme } from '../context/ThemeContext';
 import './LoginPage.css';
 
 const { Title, Text } = Typography;
@@ -11,6 +14,7 @@ function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const navigate = useNavigate();
+    const { theme } = useTheme();
 
     const onFinish = async (values: { username: string; password: string }) => {
         setLoading(true);
@@ -38,9 +42,15 @@ function LoginPage() {
 
     return (
         <div className="login-container">
+            <div className="login-theme-toggle">
+                <ThemeToggle />
+            </div>
             <Card className="login-card">
-                <div className="login-header">
-                    <Title level={2}>🔐 InsiderThreat System</Title>
+                <div className="login-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <Logo width={64} height={64} showText={false} />
+                    </div>
+                    <Title level={2}>InsiderThreat System</Title>
                 </div>
 
                 {errorMessage && (

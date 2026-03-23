@@ -19,6 +19,7 @@ import MeetPage from './pages/MeetPage';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotificationToast from './components/NotificationToast';
 import { ChatWidget } from './components/ChatWidget';
+import { useTheme } from './context/ThemeContext';
 import './App.css';
 
 // Component bảo vệ route - kiểm tra đăng nhập
@@ -42,7 +43,8 @@ function RoleBasedRedirect() {
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
-  const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  const { theme: currentTheme } = useTheme();
+  const isDarkMode = currentTheme === 'dark';
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -52,20 +54,9 @@ function App() {
     // Tự động kiểm tra token mỗi giây để UI phản ứng nhanh khi login/logout
     const interval = setInterval(handleStorageChange, 1000);
 
-    // Watch for dark mode changes on the root html element
-    const themeObserver = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          setIsDarkMode(document.documentElement.classList.contains('dark'));
-        }
-      });
-    });
-    themeObserver.observe(document.documentElement, { attributes: true });
-
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
-      themeObserver.disconnect();
     };
   }, []);
 
