@@ -119,19 +119,23 @@ export default function NavigationBar({ onChatClick }: NavigationBarProps) {
                     onClick={() => navigate('/feed')}
                     title="Feed"
                 >
-                    <span className="material-symbols-outlined">home</span>
+                    <div className={styles.actionIcon}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                            <path d="M11.1 2.8a1.5 1.5 0 011.8 0l8.9 6.7a1.5 1.5 0 01.6 1.2V20a2 2 0 01-2 2h-4a1 1 0 01-1-1v-5h-4v5a1 1 0 01-1 1H5a2 2 0 01-2-2v-9.3a1.5 1.5 0 01.6-1.2l8.9-6.7z" />
+                        </svg>
+                    </div>
                 </button>
 
                 {/* Chat Link */}
                 <button
-                    className={`${styles.iconButton} ${styles.chatButton}`}
+                    className={`${styles.iconButton} ${isActive('/chat') ? styles.active : ''}`}
                     onClick={onChatClick || (() => navigate('/chat'))}
                     title="Chat"
                 >
-                    <div className={styles.messengerIcon}>
+                    <div className={styles.actionIcon}>
                         {/* Custom Messenger SVG */}
                         <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                            <path d="M12.001 2.011a9.982 9.982 0 00-9.98 10.03c0 3.16 1.48 6.13 3.99 8.04L5.68 22l3.24-1.74a9.907 9.907 0 003.081.49 9.982 9.982 0 000-18.739h.001zm0 13.5l-2.61-2.92-4.99 2.92 5.5-5.91 2.7 2.92 4.88-2.92-5.48 5.91z" />
+                            <path d="M12 2C6.48 2 2 6.13 2 11.23c0 2.84 1.48 5.37 3.8 7.02.16.11.23.31.2.5l-.47 2.87c-.05.32.32.55.6.38l3.16-1.87a.35.35 0 01.32-.01c.77.3 1.63.48 2.53.48 5.52 0 10-4.13 10-9.23S17.52 2 12 2zM9.9 14.15a.9.9 0 01-1.22.06l-2.45-1.95a.9.9 0 01.07-1.47l4.46-3.03a.9.9 0 011.22-.06l2.45 1.95a.9.9 0 01-.07 1.47l-4.46 3.03z" />
                         </svg>
                         <div className={styles.messageBadge}>2</div>
                     </div>
@@ -140,11 +144,15 @@ export default function NavigationBar({ onChatClick }: NavigationBarProps) {
                 {/* Notifications */}
                 <div style={{ position: 'relative' }} ref={notificationRef}>
                     <button
-                        className={styles.iconButton}
+                        className={`${styles.iconButton} ${showNotifications ? styles.active : ''}`}
                         onClick={() => setShowNotifications(!showNotifications)}
                     >
-                        <span className="material-symbols-outlined">notifications</span>
-                        {unreadCount > 0 && <span className={styles.badge}></span>}
+                        <div className={styles.actionIcon}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                                <path d="M21 19h-1.5v-6.5c0-3.69-2.58-6.79-6-7.4v-.85c0-.97-.78-1.75-1.75-1.75S10 3.28 10 4.25v.85c-3.42.61-6 3.71-6 7.4V19H2.5A1.5 1.5 0 001 20.5 1.5 1.5 0 002.5 22h19a1.5 1.5 0 001.5-1.5A1.5 1.5 0 0021 19zM12 24c1.38 0 2.5-1.12 2.5-2.5h-5c0 1.38 1.12 2.5 2.5 2.5z" />
+                            </svg>
+                            {unreadCount > 0 && <span className={styles.notificationDot}></span>}
+                        </div>
                     </button>
 
                     {showNotifications && (
