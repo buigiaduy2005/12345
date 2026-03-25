@@ -95,7 +95,9 @@
 .zdak-watermark {
     position: absolute;
     bottom: 50px;
-    left: 50px;
+    left: 0;
+    right: 0;
+    text-align: center;
     font-size: 48px;
     font-weight: 900;
     color: var(--color-border);

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import LeftSidebar from '../components/LeftSidebar';
 import BottomNavigation from '../components/BottomNavigation';
 import GroupDashboardTab from '../components/groups/GroupDashboardTab';
+import MyTaskTab from '../components/groups/MyTaskTab';
 import { useTranslation } from 'react-i18next';
 import './GroupDetailPage.css';
 
@@ -67,8 +67,6 @@ export default function GroupDetailPage() {
 
     return (
         <div className="groupDetail-container">
-            {!isMobile && <LeftSidebar />}
-            
             <div className="groupDetail-main-wrapper">
                 <div className="groupDetail">
                     {/* Header */}
@@ -80,6 +78,14 @@ export default function GroupDetailPage() {
                             <h1 className="groupTitle">{groupName}</h1>
                             <p className="groupSubtitle">Quản lý và theo dõi tiến độ công việc dự án</p>
                         </div>
+                    </div>
+
+                    {/* Main Content Area */}
+                    <div className="tabContent">
+                        {activeTab === 'dashboard' && <GroupDashboardTab />}
+                        {activeTab === 'mytask' && <MyTaskTab />}
+                        {activeTab === 'timeline' && <div className="placeholder-tab">Timeline View</div>}
+                        {activeTab === 'files' && <div className="placeholder-tab">Files View</div>}
                     </div>
 
                     {/* Tab Navigation */}
