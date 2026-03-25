@@ -264,7 +264,7 @@ export default function ProfilePage() {
                             <span className="section-label">{t('profile.section_security_settings', 'Cài đặt bảo mật')}</span>
                             <div className="info-card-mobile">
                                 <div className="security-list">
-                                    <div className="security-item-card" onClick={isOwnProfile && (!user.faceEmbeddings || user.faceEmbeddings.length === 0) ? () => setIsFaceModalOpen(true) : undefined} style={{ cursor: isOwnProfile && (!user.faceEmbeddings || user.faceEmbeddings.length === 0) ? 'pointer' : 'default' }}>
+                                    <div className="security-item-card">
                                         <span className={`material-symbols-outlined ${user.faceEmbeddings && user.faceEmbeddings.length > 0 ? 'icon-green' : 'icon-gray'}`}>
                                             {user.faceEmbeddings && user.faceEmbeddings.length > 0 ? 'sentiment_satisfied' : 'face'}
                                         </span>
