@@ -199,7 +199,7 @@
     background: var(--color-surface);
     border-radius: 20px;
     padding: 28px;
-    width: 500px;
+    width: 650px;
     max-width: 95vw;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
@@ -326,6 +326,65 @@
 
 .removeTag:hover {
     color: #ef4444;
+}
+
+/* User Search Dropdown */
+.userSearchResults {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    max-height: 250px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.userResultItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.userResultItem:last-child {
+    border-bottom: none;
+}
+
+.userResultItem:hover {
+    background: var(--color-surface-hover);
+}
+
+.userResultItem img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--color-background);
+}
+
+.userInfoBlock {
+    display: flex;
+    flex-direction: column;
+}
+
+.uName {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.uEmail {
+    font-size: 12px;
+    color: var(--color-text-muted);
 }
 
 .modalActions {
