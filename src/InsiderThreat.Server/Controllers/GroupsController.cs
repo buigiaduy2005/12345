@@ -165,6 +165,41 @@ namespace InsiderThreat.Server.Controllers
                 return StatusCode(500, new { message = "Error leaving group", error = ex.Message });
             }
         }
+
+        // DELETE: api/Groups/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteGroup(string id)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var group = await _groups.Find(g => g.Id == id).FirstOrDefaultAsync();
+
+                if (group == null)
+                {
+                    return NotFound(new { message = "Group not found" });
+                }
+
+                // Only group admins can delete the group
+                if (!group.AdminIds.Contains(userId!))
+                {
+                    return Forbid();
+                }
+
+                var result = await _groups.DeleteOneAsync(g => g.Id == id);
+
+                if (result.DeletedCount == 0)
+                {
+                    return NotFound(new { message = "Group not found or already deleted" });
+                }
+
+                return Ok(new { message = "Group deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error deleting group", error = ex.Message });
+            }
+        }
     }
 
     public class CreateGroupRequest

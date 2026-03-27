@@ -118,6 +118,21 @@ export default function GroupsPage() {
         }
     };
 
+    const handleDeleteGroup = async (e: React.MouseEvent, group: Group) => {
+        e.stopPropagation();
+        
+        const confirmDelete = window.confirm(t('groups.confirm_delete_msg', { name: group.name }));
+        if (!confirmDelete) return;
+
+        try {
+            await api.delete(`/api/groups/${group.id}`);
+            setGroups(groups.filter(g => g.id !== group.id));
+        } catch (err) {
+            console.error('Failed to delete group', err);
+            alert(t('groups.delete_fail', 'Xóa dự án thất bại.'));
+        }
+    };
+
     const filteredUsers = searchUserQuery 
         ? allUsers.filter(u => 
             (u.fullName?.toLowerCase().includes(searchUserQuery.toLowerCase()) || 
@@ -167,6 +182,15 @@ export default function GroupsPage() {
                                     <span className={`privacyBadge ${group.privacy === 'PRIVATE' ? 'badgePrivate' : 'badgePublic'}`}>
                                         {group.privacy}
                                     </span>
+                                    {!['1', '2', '3', '4'].includes(group.id) && (
+                                        <button 
+                                            className="deleteGroupBtn" 
+                                            onClick={(e) => handleDeleteGroup(e, group)}
+                                            title={t('groups.btn_delete')}
+                                        >
+                                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="groupBody">
                                     <div className="groupName">{group.name}</div>

@@ -38,6 +38,7 @@ export default function LeftSidebar() {
         { icon: 'groups', label: t('nav.groups', 'Nhóm'), path: '/groups' },
         { icon: 'videocam', label: t('nav.meet', 'Họp trực tuyến'), path: '/meet' },
         { icon: 'event_available', label: t('nav.attendance', 'Chấm công'), path: '/attendance', special: true },
+        ...(isAdmin ? [{ icon: 'security', label: t('nav.monitor_logs', 'Agent kiểm soát tại máy tính cá nhân'), path: '/monitor-logs' }] : []),
         { icon: 'person', label: t('nav.profile', 'Cá nhân'), path: '/profile' },
     ];
 

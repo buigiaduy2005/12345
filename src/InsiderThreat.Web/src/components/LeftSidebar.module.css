@@ -24,37 +24,6 @@
         /* Show on desktop */
     }
 }
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 8px 16px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.logoIcon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #2563eb, #60a5fa);
-    color: white;
-    font-size: 18px;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-    flex-shrink: 0;
-}
-
-.logoText {
-    font-size: 16px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    color: var(--color-text-main);
-}
-
 /* Nav */
 .nav {
     display: flex;

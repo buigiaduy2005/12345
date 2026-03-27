@@ -1,0 +1,250 @@
+.timelineTab {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.timeline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.timeline-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #d1fae5;
+    color: #059669;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.timeline-breadcrumb {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.timeline-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tl-btn-outline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tl-btn-outline:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.tl-btn-primary {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--color-primary, #1d4ed8);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.tl-btn-primary:hover { opacity: 0.9; }
+
+/* Main Gantt Layout */
+.timeline-body {
+    display: flex;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    overflow: hidden;
+    min-height: 300px;
+}
+
+.tl-left {
+    width: 200px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--color-border);
+}
+
+.tl-col-header {
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border);
+    height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+.tl-group-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    background: var(--color-background);
+    user-select: none;
+}
+
+.tl-group-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-main);
+}
+
+.tl-task-row {
+    padding: 9px 16px 9px 32px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 38px;
+    display: flex;
+    align-items: center;
+}
+
+/* Right Gantt */
+.tl-right {
+    flex: 1;
+    overflow-x: auto;
+}
+
+.tl-date-header {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    height: 40px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-background);
+}
+
+.tl-date-header span {
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    border-right: 1px solid var(--color-border);
+}
+
+.tl-gantt-group-row {
+    height: 41px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-background);
+}
+
+.tl-gantt-bar-row {
+    height: 38px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+}
+
+.tl-bar-track {
+    flex: 1;
+    position: relative;
+    height: 24px;
+}
+
+.tl-bar {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* Milestones */
+.tl-milestones {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.tl-milestones h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    color: var(--color-text-main);
+}
+
+.milestone-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.milestone-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    color: var(--color-text-muted);
+    transition: all 0.2s;
+}
+
+.milestone-item.done {
+    border-color: #10b981;
+    background: #f0fdf4;
+    color: #059669;
+}
+
+.milestone-item .material-symbols-outlined {
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.milestone-name {
+    margin: 0 0 2px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
+}
+
+.milestone-date {
+    margin: 0;
+    font-size: 12px;
+}
+
+@media (max-width: 768px) {
+    .milestone-list { grid-template-columns: repeat(2, 1fr); }
+    .tl-left { width: 140px; }
+}

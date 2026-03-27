@@ -3,236 +3,260 @@ import { useTranslation } from 'react-i18next';
 import CreateTaskModal from './CreateTaskModal';
 import './MyTaskTab.css';
 
+interface Task {
+    id: number;
+    tag: string;
+    tagColor: string;
+    title: string;
+    description?: string;
+    progress: number;
+    members: string[];
+    comments: number;
+    attachments?: number;
+    deadline?: string;
+    priority?: 'urgent' | 'normal';
+    actionIcon?: string;
+    isActive?: boolean;
+}
+
+interface Column {
+    id: string;
+    label: string;
+    color: string;
+    dotColor: string;
+    tasks: Task[];
+}
+
+const INITIAL_COLUMNS: Column[] = [
+    {
+        id: 'todo', label: 'project_detail.charts.remaining', color: '#64748b', dotColor: '#64748b',
+        tasks: [
+            {
+                id: 1, tag: 'DESIGN', tagColor: '#10b981', title: 'Develop design language for the mobile interface overhaul',
+                progress: 35, members: ['https://i.pravatar.cc/150?u=sarah', 'https://i.pravatar.cc/150?u=marcus'],
+                comments: 0, deadline: '2d', actionIcon: 'attach_file',
+            },
+            {
+                id: 2, tag: 'URGENT', tagColor: '#ef4444', title: 'API Documentation for v2.0 endpoint architecture',
+                progress: 0, members: ['https://i.pravatar.cc/150?u=james'],
+                comments: 4, priority: 'urgent',
+            }
+        ]
+    },
+    {
+        id: 'inprogress', label: 'project_detail.charts.in_progress', color: '#3b82f6', dotColor: '#3b82f6',
+        tasks: [
+            {
+                id: 3, tag: 'EDITORIAL', tagColor: '#6366f1', title: 'Final copy review for brand manifesto',
+                progress: 65, members: ['https://i.pravatar.cc/150?u=elena'],
+                comments: 0, deadline: 'Today', isActive: true, actionIcon: 'bolt',
+            },
+            {
+                id: 4, tag: 'FRONTEND', tagColor: '#f59e0b', title: 'Implement Dark Mode using Design System tokens',
+                progress: 40, members: ['https://i.pravatar.cc/150?u=sarah'],
+                comments: 0,
+            }
+        ]
+    },
+    {
+        id: 'inreview', label: 'project_detail.focus.critical', color: '#f59e0b', dotColor: '#f59e0b',
+        tasks: [
+            {
+                id: 5, tag: 'MARKETING', tagColor: '#8b5cf6', title: 'Social Media assets for Q3 product launch',
+                progress: 80, members: ['https://i.pravatar.cc/150?u=sarah', 'https://i.pravatar.cc/150?u=james'],
+                comments: 0, actionIcon: 'visibility',
+            }
+        ]
+    },
+    {
+        id: 'done', label: 'project_detail.charts.done', color: '#10b981', dotColor: '#10b981',
+        tasks: [
+            {
+                id: 6, tag: 'STRATEGY', tagColor: '#64748b', title: 'Quarterly strategy presentation to stakeholders',
+                progress: 100, members: ['https://i.pravatar.cc/150?u=elena'],
+                comments: 0,
+            }
+        ]
+    }
+];
+
 export default function MyTaskTab() {
     const { t } = useTranslation();
-    const [viewMode, setViewMode] = useState<'kanban' | 'timeline' | 'spreadsheet'>('kanban');
+    const [columns, setColumns] = useState<Column[]>(INITIAL_COLUMNS);
+    const [viewMode, setViewMode] = useState<'kanban' | 'timeline' | 'list'>('kanban');
     const [showCreateTask, setShowCreateTask] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [dragging, setDragging] = useState<{ colId: string; taskId: number } | null>(null);
+
+    const handleDragStart = (colId: string, taskId: number) => {
+        setDragging({ colId, taskId });
+    };
+
+    const handleDropToColumn = (targetColId: string) => {
+        if (!dragging || dragging.colId === targetColId) return;
+        const srcCol = columns.find(c => c.id === dragging.colId)!;
+        const task = srcCol.tasks.find(t => t.id === dragging.taskId)!;
+        setColumns(prev => prev.map(col => {
+            if (col.id === dragging.colId) return { ...col, tasks: col.tasks.filter(t => t.id !== dragging.taskId) };
+            if (col.id === targetColId) return { ...col, tasks: [...col.tasks, task] };
+            return col;
+        }));
+        setDragging(null);
+    };
 
     return (
         <div className="myTaskTab">
-            {/* Header Area */}
+            {/* Topbar */}
             <div className="myTask-topBar">
                 <div className="topBar-left">
-                    <h2>My Task</h2>
+                    <div className="task-project-label">PROJECT NARRATIVE</div>
+                    <h2 className="task-project-title">{t('project_detail.header.sprint')}</h2>
                 </div>
                 <div className="topBar-right">
                     <div className="searchTask">
                         <span className="material-symbols-outlined">search</span>
-                        <input type="text" placeholder={t('mytask.search_task', 'Search task...')} />
+                        <input type="text" placeholder={t('project_detail.mytasks.search')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
-                    <button className="iconBtn" title="Share"><span className="material-symbols-outlined">share</span></button>
-                    <button className="iconBtn" title="Notifications"><span className="material-symbols-outlined">notifications</span></button>
-                    <div className="divider"></div>
-                    <span className="lastSync">3 min ago</span>
+                    <div className="viewToggles">
+                        <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>
+                            <span className="material-symbols-outlined">view_column</span> {t('project_detail.mytasks.board')}
+                        </button>
+                        <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>
+                            <span className="material-symbols-outlined">menu</span> {t('project_detail.mytasks.list')}
+                        </button>
+                        <button className={viewMode === 'timeline' ? 'active' : ''} onClick={() => setViewMode('timeline')}>
+                            <span className="material-symbols-outlined">tune</span> {t('project_detail.mytasks.filters')}
+                        </button>
+                    </div>
+                    <button className="addNewBtn" onClick={() => setShowCreateTask(true)}>
+                        <span className="material-symbols-outlined">add</span> {t('project_detail.mytasks.add_new')}
+                    </button>
                     <div className="memberPile">
-                        <img src="https://i.pravatar.cc/150?u=12" alt="Avatar" className="avatar-overlap" />
-                        <img src="https://i.pravatar.cc/150?u=24" alt="Avatar" className="avatar-overlap" />
+                        <img src="https://i.pravatar.cc/150?u=12" alt="User" className="avatar-overlap" />
+                        <img src="https://i.pravatar.cc/150?u=24" alt="User" className="avatar-overlap" />
                         <span className="avatar-more">+2</span>
                     </div>
-                    <button className="inviteBtn"><span className="material-symbols-outlined" style={{fontSize: 18}}>person_add</span> Invite</button>
-                    <button className="btnCreateTask" style={{ background: 'var(--color-text-main)', color: 'var(--color-background)', border: 'none', padding: '6px 16px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => setShowCreateTask(true)}>
-                        <span className="material-symbols-outlined" style={{fontSize: 18}}>add</span> New Task
-                    </button>
-                    <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
                 </div>
             </div>
 
-            {/* Task Calendar Panel */}
-            <div className="panelCard taskCalendar">
-                <div className="panelHeader">
-                    <h3>Task Calendar</h3>
-                    <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
+            {/* Kanban Board */}
+            {viewMode === 'kanban' && (
+                <div className="kanbanBoard">
+                    {columns.map(col => {
+                        const filteredTasks = col.tasks.filter(t =>
+                            !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+                        return (
+                            <div
+                                key={col.id}
+                                className="kanbanColumn"
+                                onDragOver={e => e.preventDefault()}
+                                onDrop={() => handleDropToColumn(col.id)}
+                            >
+                                <div className="colHeader">
+                                    <div className="colTitle">
+                                        <span className="colDot" style={{ background: col.dotColor }}></span>
+                                        <span>{t(col.label)}</span>
+                                        <span className="colCount">{filteredTasks.length}</span>
+                                    </div>
+                                    <div className="colActions">
+                                        <button className="iconBtn">
+                                            <span className="material-symbols-outlined">add</span>
+                                        </button>
+                                        <button className="iconBtn">
+                                            <span className="material-symbols-outlined">more_horiz</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="kanbanCards">
+                                    {filteredTasks.map(task => (
+                                        <div
+                                            key={task.id}
+                                            className={`kCard ${task.isActive ? 'kCard--active' : ''}`}
+                                            draggable
+                                            onDragStart={() => handleDragStart(col.id, task.id)}
+                                        >
+                                            <div className="kCardTop">
+                                                <span className="kCardTag" style={{ background: task.tagColor + '22', color: task.tagColor }}>
+                                                    {task.tag}
+                                                </span>
+                                                {task.deadline && (
+                                                    <span className={`kCardDeadline ${task.deadline === 'Today' ? 'kCardDeadline--today' : ''}`}>
+                                                        {task.deadline === 'Today'
+                                                            ? <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span> {t('feed.period_today')}</>
+                                                            : <><span className="material-symbols-outlined" style={{ fontSize: 14 }}>schedule</span> {task.deadline}</>
+                                                        }
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <h4 className="kCardTitle">{task.title}</h4>
+
+                                            <div className="kCardProgress">
+                                                <div className="kProgressBar">
+                                                    <div className="kProgressFill" style={{
+                                                        width: `${task.progress}%`,
+                                                        background: task.progress === 100 ? '#10b981' : col.color
+                                                    }}></div>
+                                                </div>
+                                            </div>
+
+                                            <div className="kCardFooter">
+                                                <div className="kCardMembers">
+                                                    {task.members.map((url, i) => (
+                                                        <img key={i} src={url} alt="member" className="kMemberAvatar" />
+                                                    ))}
+                                                </div>
+                                                <div className="kCardActions">
+                                                    {task.comments > 0 && (
+                                                        <span className="kCardMeta">
+                                                            <span className="material-symbols-outlined">chat_bubble_outline</span>
+                                                            {task.comments}
+                                                        </span>
+                                                    )}
+                                                    {task.actionIcon && (
+                                                        <span className="kCardMeta">
+                                                            <span className="material-symbols-outlined">{task.actionIcon}</span>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* Add task placeholder */}
+                                    <button className="addTaskBtn" onClick={() => setShowCreateTask(true)}>
+                                        <span className="material-symbols-outlined">add</span>
+                                        {t('project_detail.mytasks.add_task')}
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
-                <div className="calendarGridWrapper">
-                    <div className="calendarHeader">
-                        <span>11 Feb</span><span>12 Feb</span><span>13 Feb</span><span>14 Feb</span>
-                        <span>15 Feb</span><span>16 Feb</span><span>17 Feb</span><span>18 Feb</span>
-                    </div>
-                    <div className="calendarBody">
-                        <div className="timeBar" style={{ left: '10%', width: '15%', top: '24px' }}>11 Feb: Submit Final Screens</div>
-                        <div className="timeBar" style={{ left: '10%', width: '15%', top: '64px' }}>11 Feb: Client Feedback</div>
-                        <div className="timeBar dark" style={{ left: '18%', width: '18%', top: '104px', color:'white' }}>12 Feb: Client Feedback Meeting</div>
-                        <div className="timeBar" style={{ left: '40%', width: '15%', top: '64px' }}>14 Feb: Prototype Testing</div>
-                        <div className="timeBar" style={{ left: '60%', width: '15%', top: '144px' }}>15 Feb: Finalize UI Screens</div>
-                        <div className="timeBar" style={{ left: '80%', width: '15%', top: '64px' }}>17 Feb: Update Style</div>
-                        
-                        <div className="currentTimeLine" style={{ left: '22%' }}>
-                            <div className="timeNode"></div>
-                            <div style={{position: 'absolute', top: -20, left: -4, fontSize: 10, fontWeight: 700}}>T</div>
-                        </div>
-                    </div>
+            )}
+
+            {/* Bottom Stats Bar */}
+            <div className="taskStatsBar">
+                <div className="taskStatItem">
+                    <span className="taskStatLabel">{t('project_detail.charts.velocity')}</span>
+                    <span className="taskStatValue">84%</span>
                 </div>
-            </div>
-
-            {/* All Task / Kanban Panel */}
-            <div className="panelCard allTaskPanel">
-                <div className="panelHeader" style={{ borderBottom: 'none', paddingBottom: 0 }}>
-                    <h3>All Task</h3>
-                    <div className="taskViewOptions">
-                        <div className="viewToggles">
-                            <button className={viewMode === 'spreadsheet' ? 'active' : ''} onClick={() => setViewMode('spreadsheet')}>
-                                <span className="material-symbols-outlined">grid_on</span> Spreadsheet
-                            </button>
-                            <button className={viewMode === 'timeline' ? 'active' : ''} onClick={() => setViewMode('timeline')}>
-                                <span className="material-symbols-outlined">timeline</span> Timeline
-                            </button>
-                            <button className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')}>
-                                <span className="material-symbols-outlined">view_kanban</span> Kanban
-                            </button>
-                        </div>
-                        <button className="iconBtn"><span className="material-symbols-outlined">filter_list</span></button>
-                    </div>
+                <div className="taskStatDivider"></div>
+                <div className="taskStatItem">
+                    <span className="taskStatLabel">{t('project_detail.charts.mood')}</span>
+                    <span className="taskStatValue" style={{ color: '#10b981' }}>{t('project_detail.charts.optimal')}</span>
                 </div>
-
-                {viewMode === 'kanban' && (
-                    <div className="kanbanBoard">
-                        {/* To-do Column */}
-                        <div className="kanbanColumn">
-                            <div className="colHeader">
-                                <div className="colTitle"><span className="material-symbols-outlined" style={{color: '#64748b'}}>radio_button_unchecked</span> To-do <span className="colCount">4</span></div>
-                                <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
-                            </div>
-                            <div className="kanbanCards">
-                                <div className="kCard">
-                                    <div className="kCardTop">
-                                        <span className="kCardTag">ABC Dashboard</span>
-                                        <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
-                                    </div>
-                                    <div className="kCardDate"><span className="material-symbols-outlined" style={{color: '#ef4444', fontSize: 16}}>signal_cellular_alt</span> Feb 12, 2027</div>
-                                    <h4 className="kCardTitle">Create Wireframe</h4>
-                                    <div className="kCardProgress">
-                                        <div className="pText">Progress: 0%</div>
-                                        <div className="pBar"><div className="pFill" style={{width: '0%'}}></div></div>
-                                    </div>
-                                    <div className="kCardFooter">
-                                        <div className="kCardMembers">
-                                            <img src="https://i.pravatar.cc/150?u=12" alt="User" />
-                                            <img src="https://i.pravatar.cc/150?u=24" alt="User" />
-                                        </div>
-                                        <div className="kCardMeta">
-                                            <span><span className="material-symbols-outlined">chat_bubble_outline</span> 3</span>
-                                            <span><span className="material-symbols-outlined">attach_file</span> 2</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* In Progress Column */}
-                        <div className="kanbanColumn">
-                            <div className="colHeader">
-                                <div className="colTitle">
-                                    <span className="material-symbols-outlined" style={{color: '#3b82f6'}}>motion_photos_on</span> 
-                                    <span style={{color: '#3b82f6', background: '#eff6ff', padding: '2px 8px', borderRadius: 12}}>In Progress</span> 
-                                    <span className="colCount">5</span>
-                                </div>
-                                <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
-                            </div>
-                            <div className="kanbanCards">
-                                <div className="kCard">
-                                    <div className="kCardTop">
-                                        <span className="kCardTag">Sinen Dashboard</span>
-                                        <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
-                                    </div>
-                                    <div className="kCardDate"><span className="material-symbols-outlined" style={{color: '#3b82f6', fontSize: 16}}>signal_cellular_alt</span> Feb 12, 2027</div>
-                                    <h4 className="kCardTitle">UI Testing</h4>
-                                    <div className="kCardProgress">
-                                        <div className="pText">Progress: 25%</div>
-                                        <div className="pBar"><div className="pFill" style={{width: '25%', background: '#3b82f6'}}></div></div>
-                                    </div>
-                                    <div className="kCardFooter">
-                                        <div className="kCardMembers">
-                                            <img src="https://i.pravatar.cc/150?u=36" alt="User" />
-                                            <img src="https://i.pravatar.cc/150?u=48" alt="User" />
-                                        </div>
-                                        <div className="kCardMeta">
-                                            <span><span className="material-symbols-outlined">chat_bubble_outline</span> 14</span>
-                                            <span><span className="material-symbols-outlined">link</span> 4</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* In Review Column */}
-                        <div className="kanbanColumn">
-                            <div className="colHeader">
-                                <div className="colTitle">
-                                    <span className="material-symbols-outlined" style={{color: '#eab308'}}>remove_red_eye</span> 
-                                    <span style={{color: '#eab308', background: '#fefce8', padding: '2px 8px', borderRadius: 12}}>In Review</span> 
-                                    <span className="colCount">3</span>
-                                </div>
-                                <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
-                            </div>
-                            <div className="kanbanCards">
-                                <div className="kCard">
-                                    <div className="kCardTop">
-                                        <span className="kCardTag">Twingkle Website</span>
-                                        <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
-                                    </div>
-                                    <div className="kCardDate"><span className="material-symbols-outlined" style={{color: '#3b82f6', fontSize: 16}}>signal_cellular_alt</span> Feb 12, 2027</div>
-                                    <h4 className="kCardTitle">Update Style</h4>
-                                    <div className="kCardProgress">
-                                        <div className="pText">Progress: 55%</div>
-                                        <div className="pBar"><div className="pFill" style={{width: '55%', background: '#10b981'}}></div></div>
-                                    </div>
-                                    <div className="kCardFooter">
-                                        <div className="kCardMembers">
-                                            <img src="https://i.pravatar.cc/150?u=12" alt="User" />
-                                            <img src="https://i.pravatar.cc/150?u=24" alt="User" />
-                                        </div>
-                                        <div className="kCardMeta">
-                                            <span><span className="material-symbols-outlined">chat_bubble_outline</span> 7</span>
-                                            <span><span className="material-symbols-outlined">link</span> 1</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Completed Column */}
-                        <div className="kanbanColumn">
-                            <div className="colHeader">
-                                <div className="colTitle">
-                                    <span className="material-symbols-outlined" style={{color: '#10b981'}}>check_circle</span> 
-                                    <span style={{color: '#10b981', background: '#f0fdf4', padding: '2px 8px', borderRadius: 12}}>Completed</span> 
-                                    <span className="colCount">4</span>
-                                </div>
-                                <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
-                            </div>
-                            <div className="kanbanCards">
-                                <div className="kCard">
-                                    <div className="kCardTop">
-                                        <span className="kCardTag">ABC Dashboard</span>
-                                        <button className="iconBtn"><span className="material-symbols-outlined">more_horiz</span></button>
-                                    </div>
-                                    <div className="kCardDate"><span className="material-symbols-outlined" style={{color: '#ef4444', fontSize: 16}}>signal_cellular_alt</span> Feb 12, 2027</div>
-                                    <h4 className="kCardTitle">Create Wireframe</h4>
-                                    <div className="kCardProgress">
-                                        <div className="pText">Progress: 100%</div>
-                                        <div className="pBar"><div className="pFill" style={{width: '100%', background: '#10b981'}}></div></div>
-                                    </div>
-                                    <div className="kCardFooter">
-                                        <div className="kCardMembers">
-                                            <img src="https://i.pravatar.cc/150?u=12" alt="User" />
-                                            <img src="https://i.pravatar.cc/150?u=24" alt="User" />
-                                        </div>
-                                        <div className="kCardMeta">
-                                            <span><span className="material-symbols-outlined">chat_bubble_outline</span> 3</span>
-                                            <span><span className="material-symbols-outlined">attach_file</span> 2</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <button className="taskStatAction">
+                    <span className="material-symbols-outlined">trending_up</span>
+                </button>
             </div>
 
             {showCreateTask && (
-                <CreateTaskModal 
-                    onClose={() => setShowCreateTask(false)} 
-                    onSubmit={() => setShowCreateTask(false)} 
+                <CreateTaskModal
+                    onClose={() => setShowCreateTask(false)}
+                    onSubmit={() => setShowCreateTask(false)}
                 />
             )}
         </div>

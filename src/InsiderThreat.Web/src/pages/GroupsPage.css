@@ -133,6 +133,36 @@
     position: relative;
 }
 
+.deleteGroupBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s;
+    opacity: 0;
+    transform: scale(0.9);
+}
+
+.groupCard:hover .deleteGroupBtn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.deleteGroupBtn:hover {
+    background: #dc2626;
+    transform: scale(1.1) !important;
+}
+
 .groupName {
     font-size: 15px;
     font-weight: 700;

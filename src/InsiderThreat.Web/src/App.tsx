@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider, theme, App as AntdApp } from 'antd';
 import viVN from 'antd/locale/vi_VN';
 import enUS from 'antd/locale/en_US';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ import GroupDetailPage from './pages/GroupDetailPage';
 import LibraryPage from './pages/LibraryPage';
 import SocialAttendancePage from './pages/SocialAttendancePage';
 import MeetPage from './pages/MeetPage';
+import MonitorLogsPage from './pages/MonitorLogsPage';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotificationToast from './components/NotificationToast';
 import { ChatWidget } from './components/ChatWidget';
@@ -74,33 +75,36 @@ function App() {
         }
       }}
     >
-      <BrowserRouter>
-        <NotificationProvider>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/face-login" element={<FaceLoginPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-            <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
-            <Route path="/usb-monitor" element={<PrivateRoute><UsbMonitorPage /></PrivateRoute>} />
-            <Route path="/documents" element={<PrivateRoute><DocumentsPage /></PrivateRoute>} />
-            <Route path="/profile/:userId" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-            <Route path="/feed" element={<PrivateRoute><FeedPage /></PrivateRoute>} />
-            <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-            <Route path="/staff" element={<PrivateRoute><StaffPage /></PrivateRoute>} />
-            <Route path="/groups" element={<PrivateRoute><GroupsPage /></PrivateRoute>} />
-            <Route path="/groups/:id" element={<PrivateRoute><GroupDetailPage /></PrivateRoute>} />
-            <Route path="/library" element={<PrivateRoute><LibraryPage /></PrivateRoute>} />
-            <Route path="/attendance" element={<PrivateRoute><SocialAttendancePage /></PrivateRoute>} />
-            <Route path="/meet" element={<PrivateRoute><MeetPage /></PrivateRoute>} />
-            <Route path="/" element={<RoleBasedRedirect />} />
-            <Route path="*" element={<RoleBasedRedirect />} />
-          </Routes>
-          {/* Global components */}
-          <NotificationToast />
-          {isLoggedIn && <ChatWidget />}
-        </NotificationProvider>
-      </BrowserRouter>
+      <AntdApp>
+        <BrowserRouter>
+          <NotificationProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/face-login" element={<FaceLoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+              <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
+              <Route path="/usb-monitor" element={<PrivateRoute><UsbMonitorPage /></PrivateRoute>} />
+              <Route path="/documents" element={<PrivateRoute><DocumentsPage /></PrivateRoute>} />
+              <Route path="/profile/:userId" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+              <Route path="/feed" element={<PrivateRoute><FeedPage /></PrivateRoute>} />
+              <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+              <Route path="/staff" element={<PrivateRoute><StaffPage /></PrivateRoute>} />
+              <Route path="/groups" element={<PrivateRoute><GroupsPage /></PrivateRoute>} />
+              <Route path="/groups/:id" element={<PrivateRoute><GroupDetailPage /></PrivateRoute>} />
+              <Route path="/library" element={<PrivateRoute><LibraryPage /></PrivateRoute>} />
+              <Route path="/attendance" element={<PrivateRoute><SocialAttendancePage /></PrivateRoute>} />
+              <Route path="/meet" element={<PrivateRoute><MeetPage /></PrivateRoute>} />
+              <Route path="/monitor-logs" element={<PrivateRoute><MonitorLogsPage /></PrivateRoute>} />
+              <Route path="/" element={<RoleBasedRedirect />} />
+              <Route path="*" element={<RoleBasedRedirect />} />
+            </Routes>
+            {/* Global components */}
+            <NotificationToast />
+            {isLoggedIn && <ChatWidget />}
+          </NotificationProvider>
+        </BrowserRouter>
+      </AntdApp>
     </ConfigProvider>
   );
 }
