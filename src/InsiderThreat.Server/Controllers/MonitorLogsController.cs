@@ -225,7 +225,12 @@ namespace InsiderThreat.Server.Controllers
                 if (logs.Count == 0)
                     return BadRequest(new { message = "No logs to export" });
 
-                var json = JsonSerializer.Serialize(logs, new JsonSerializerOptions { WriteIndented = true });
+                var options = new JsonSerializerOptions 
+                { 
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+                };
+                var json = JsonSerializer.Serialize(logs, options);
                 byte[] zipData;
 
                 using (var zipStream = new MemoryStream())

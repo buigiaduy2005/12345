@@ -216,13 +216,14 @@ const MonitorLogsPage: React.FC = () => {
             okText: 'Bắt đầu nén',
             cancelText: 'Hủy',
             okButtonProps: { style: { backgroundColor: '#722ed1' } },
-            onOk: async () => {
+                onOk: async () => {
                 const hide = message.loading('Đang xử lý nén dữ liệu...', 0);
                 try {
-                    const response = await monitorService.archiveLogs(clearAfterExport);
+                    const blobData = await monitorService.archiveLogs(clearAfterExport);
                     
                     // Create blob link and trigger download
-                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    // blobData is already a Blob because of responseType: 'blob' and res.data in api.ts
+                    const url = window.URL.createObjectURL(blobData);
                     const link = document.createElement('a');
                     link.href = url;
                     
@@ -231,6 +232,7 @@ const MonitorLogsPage: React.FC = () => {
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
+                    window.URL.revokeObjectURL(url);
                     
                     message.success(`Đã đóng gói thành công: ${fileName}`);
                     if (clearAfterExport) {
@@ -249,23 +251,45 @@ const MonitorLogsPage: React.FC = () => {
     const handleUploadArchive = async (file: any) => {
         const hide = message.loading('Đang giải nén dữ liệu lưu trữ...', 0);
         try {
-            const reader = new FileReader();
+            // Get the actual file object (handle antd UploadFile)
+            const actualFile = file.originFileObj || file;
             
+            console.log('📂 [DEBUG] Processing file:', {
+                name: actualFile.name,
+                size: actualFile.size,
+                type: actualFile.type,
+                lastModified: new Date(actualFile.lastModified).toLocaleString()
+            });
+
+            if (actualFile.size === 0) {
+                throw new Error('Tệp rỗng (0 bytes).');
+            }
+
+            const reader = new FileReader();
             const zipBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
                 reader.onload = () => resolve(reader.result as ArrayBuffer);
                 reader.onerror = () => reject(new Error('Lỗi khi đọc file bằng FileReader'));
-                reader.readAsArrayBuffer(file);
+                reader.readAsArrayBuffer(actualFile);
             });
 
-            console.log(`📂 [DEBUG] ZIP Buffer loaded: ${zipBuffer.byteLength} bytes`);
+            console.log(`📂 [DEBUG] File loaded into buffer: ${zipBuffer.byteLength} bytes`);
 
-            // Check Magic Bytes (PK header: 0x50 0x4B 0x03 0x04)
+            // Check Magic Bytes
             const header = new Uint8Array(zipBuffer.slice(0, 4));
-            const isPKHeader = header[0] === 0x50 && header[1] === 0x4B && header[2] === 0x03 && header[3] === 0x04;
+            const headerHex = Array.from(header).map(b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+            console.log(`📂 [DEBUG] Header Hex: ${headerHex}`);
+
+            // ZIP signature is PK (0x50 0x4B)
+            const isZip = header[0] === 0x50 && header[1] === 0x4B;
             
-            if (!isPKHeader) {
-                console.error('❌ [DEBUG] Invalid ZIP Header:', header);
-                throw new Error('Tệp tải lên không phải là định dạng ZIP hợp lệ (Thiếu PK Header).');
+            // Check if it's a JSON file (starts with { or [)
+            const isJson = header[0] === 0x7B || header[0] === 0x5B;
+
+            if (!isZip) {
+                if (isJson) {
+                    throw new Error(`Đây có vẻ là một tệp JSON, không phải tệp ZIP. Vui lòng nén tệp JSON này lại hoặc xuất tệp mới từ hệ thống.`);
+                }
+                throw new Error(`Tệp không phải định dạng ZIP hợp lệ (Header: ${headerHex}). Vui lòng kiểm tra lại.`);
             }
 
             const zip = new JSZip();
@@ -277,19 +301,36 @@ const MonitorLogsPage: React.FC = () => {
             // Find the JSON file inside the ZIP
             const jsonFile = Object.values(contents.files).find(f => f.name.endsWith('.json'));
             if (!jsonFile) {
-                throw new Error('Không tìm thấy tệp dữ liệu .json bên trong file nén!');
+                // List all files for debugging
+                const allFiles = Object.keys(contents.files).join(', ');
+                console.error('❌ [DEBUG] No JSON found. Files in ZIP:', allFiles);
+                throw new Error(`Không tìm thấy tệp dữ liệu .json bên trong file nén! (Các tệp tìm thấy: ${allFiles || 'không có'})`);
             }
 
             console.log(`📄 [DEBUG] Found entry: ${jsonFile.name}`);
 
             const jsonStr = await jsonFile.async('string');
-            const logsData = JSON.parse(jsonStr) as MonitorLog[];
+            let logsData: MonitorLog[] = [];
+            
+            try {
+                logsData = JSON.parse(jsonStr);
+                if (!Array.isArray(logsData)) {
+                    // Try to see if it's wrapped in an object like { data: [...] }
+                    if ((logsData as any).data && Array.isArray((logsData as any).data)) {
+                        logsData = (logsData as any).data;
+                    } else {
+                        throw new Error('Định dạng JSON không hợp lệ (Không phải là một danh sách logs).');
+                    }
+                }
+            } catch (e: any) {
+                throw new Error(`Lỗi khi giải mã JSON bên trong file nén: ${e.message}`);
+            }
             
             setArchiveLogs(logsData);
             setIsArchiveMode(true);
-            setArchiveFileName(file.name);
+            setArchiveFileName(actualFile.name);
             setUploadModalVisible(false);
-            message.success(`Đã mở thành công bản lưu trữ: ${file.name} (${logsData.length} bản ghi)`);
+            message.success(`Đã mở thành công bản lưu trữ: ${actualFile.name} (${logsData.length} bản ghi)`);
         } catch (error: any) {
             console.error('❌ [DEBUG] Archive Parse Error:', error);
             message.error({
