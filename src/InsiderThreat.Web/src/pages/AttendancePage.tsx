@@ -206,7 +206,7 @@ function AttendancePage() {
 
             {/* Security info */}
             <Alert
-                message={
+                title={
                     <Space>
                         <SafetyOutlined />
                         {t('attendance.security_info', 'Hệ thống được bảo vệ bởi: Liveness Detection + Server-Side Matching + Anti-Replay')}
@@ -217,6 +217,7 @@ function AttendancePage() {
                 style={{ marginBottom: 16, borderRadius: 10 }}
             />
 
+
             {isAdmin && (
                 <Card
                     title={<><SettingOutlined /> {t('attendance.config_title', 'Cấu hình Mạng WiFi (IP) Chấm công')}</>}
@@ -224,12 +225,13 @@ function AttendancePage() {
                     size="small"
                 >
                     <Alert
-                        message={t('attendance.config_alert_title', 'Bảo mật mạng WiFi')}
+                        title={t('attendance.config_alert_title', 'Bảo mật mạng WiFi')}
                         description={t('attendance.config_alert_desc', 'Chọn một mạng từ danh sách các mạng đang hoạt động của cả Máy chủ và Thiết bị hiện tại để tự động trích xuất dải mạng hợp lệ (rất hữu ích cho mạng cục bộ LAN/WiFi). Các thiết bị chung mạng này sẽ có thể chấm công. Hoặc bạn có thể nhập thủ công IP chính xác bên dưới.')}
                         type="info"
                         showIcon
                         style={{ marginBottom: 16 }}
                     />
+
                     <div className="attendance-config-container">
                         <div className="config-row">
                             <span className="config-label">{t('attendance.lbl_active_network', 'Mạng đang hoạt động:')}</span>

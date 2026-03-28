@@ -24,6 +24,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import NotificationToast from './components/NotificationToast';
 import { ChatWidget } from './components/ChatWidget';
 import { useTheme } from './context/ThemeContext';
+import { loadFaceApiModels } from './services/faceApi';
 import './App.css';
 
 // Component bảo vệ route - kiểm tra đăng nhập
@@ -52,6 +53,9 @@ function App() {
   const isDarkMode = currentTheme === 'dark';
 
   useEffect(() => {
+    // Tải trước AI ngầm
+    loadFaceApiModels().catch(err => console.error('[App] Failed to pre-load Face models:', err));
+
     const handleStorageChange = () => {
       setIsLoggedIn(!!localStorage.getItem('token'));
     };

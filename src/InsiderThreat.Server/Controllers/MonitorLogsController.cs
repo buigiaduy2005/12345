@@ -136,14 +136,19 @@ namespace InsiderThreat.Server.Controllers
                 {
                     if (!string.IsNullOrEmpty(log.DetectedKeyword))
                     {
-                        var doc = await _documents.Find(d => d.Id == log.DetectedKeyword).FirstOrDefaultAsync();
-                        if (doc?.SecurityLevel == "Restricted")
+                        // Safely check if the keyword is a valid ObjectId before querying
+                        if (MongoDB.Bson.ObjectId.TryParse(log.DetectedKeyword, out _))
                         {
-                            log.SeverityScore = 10;
-                            log.MessageContext = "[TUYỆT MẬT] " + log.MessageContext;
+                            var doc = await _documents.Find(d => d.Id == log.DetectedKeyword).FirstOrDefaultAsync();
+                            if (doc?.SecurityLevel == "Restricted")
+                            {
+                                log.SeverityScore = 10;
+                                log.MessageContext = "[TUYỆT MẬT] " + log.MessageContext;
+                            }
                         }
                     }
                 }
+
 
                 await _logs.InsertManyAsync(logs);
                 _logger.LogInformation($"Successfully received batch of {logs.Count} logs from Agent.");

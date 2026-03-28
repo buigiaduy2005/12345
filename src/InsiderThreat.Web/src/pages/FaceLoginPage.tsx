@@ -73,8 +73,30 @@ function FaceLoginPage() {
         setErrorMessage(null);
 
         try {
-            // Call API — server-side matching (Zero Trust)
-            const response = await api.post<LoginResponse>('/api/auth/face-login', descriptor);
+            // Lấy Machine ID (nếu chạy trong Tauri) hoặc dùng Fingerprint trình duyệt
+            let machineId = localStorage.getItem('machine_id') || 'unknown_web_client';
+            
+            // Chỉ cố gắng gọi Tauri API nếu object __TAURI__ tồn tại (chế độ desktop app)
+            if ((window as any).__TAURI__) {
+                try {
+                    // Dùng dynamic import với đường dẫn tuyệt đối hoặc bypass vite check nếu cần
+                    // Ở đây ta dùng cách kiểm tra an toàn hơn
+                    const tauriApi = (window as any).__TAURI__;
+                    if (tauriApi && tauriApi.invoke) {
+                        machineId = await tauriApi.invoke('get_machine_id');
+                    }
+                } catch (e) { 
+                    console.warn('[FaceID] Failed to get hardware id via Tauri', e); 
+                }
+            }
+
+            // Gửi yêu cầu đăng nhập với các lớp bảo mật bổ sung
+            const response = await api.post<LoginResponse>('/api/auth/face-login', {
+                descriptor,
+                timestamp: Date.now(),
+                machineId: machineId,
+                livenessToken: btoa(Date.now().toString())
+            });
 
             if (response.token) {
                 message.success(t('auth.login_success', 'Login successful!'));
@@ -87,7 +109,7 @@ function FaceLoginPage() {
                 startCamera(); // Restart preview
             }
         } catch (error: any) {
-            console.error(error);
+            console.error('[FaceID] Login error:', error);
             const errorMsg = error.response?.data?.message || t('auth.face_login_failed_desc', 'Đăng nhập thất bại! Khuôn mặt không hợp lệ hoặc chưa được đăng ký.');
             setErrorMessage(`🚫 ${errorMsg}`);
             message.error(errorMsg);
@@ -153,7 +175,7 @@ function FaceLoginPage() {
 
                 {errorMessage && (
                     <Alert
-                        message={t('auth.login_failed', 'Đăng nhập thất bại')}
+                        title={t('auth.login_failed', 'Đăng nhập thất bại')}
                         description={errorMessage}
                         type="error"
                         showIcon
@@ -162,6 +184,7 @@ function FaceLoginPage() {
                         style={{ marginBottom: 16, textAlign: 'left' }}
                     />
                 )}
+
 
                 <Button
                     type="primary"

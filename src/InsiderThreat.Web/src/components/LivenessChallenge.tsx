@@ -13,8 +13,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as faceapi from '@vladmandic/face-api';
-import { loadFaceApiModels } from '../services/faceApi';
+import { loadFaceApiModels, getFaceDetectorOptions } from '../services/faceApi';
 import { LivenessDetector, generateChallenges } from '../services/livenessService';
+
 import type { LivenessChallenge as LivenessChallengeType } from '../services/livenessService';
 import { validateVideoDevices } from '../services/deviceValidator';
 
@@ -133,9 +134,11 @@ export default function LivenessChallengeComponent({ visible, onComplete, onFail
             setRemainingTime(detector.getRemainingTime());
 
             try {
-                const detection = await api.detectSingleFace(videoRef.current)
+                const options = getFaceDetectorOptions();
+                const detection = await api.detectSingleFace(videoRef.current, options)
                     .withFaceLandmarks()
                     .withFaceDescriptor();
+
 
                 if (detection) {
                     const challenge = challengeList[idx];

@@ -35,6 +35,9 @@ namespace InsiderThreat.Shared
 
         public string? ChatAccessCodeHash { get; set; } // Hashed 6-digit code
 
+        // Ràng buộc đăng nhập với thiết bị phần cứng cụ thể
+        public string? RegisteredMachineId { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

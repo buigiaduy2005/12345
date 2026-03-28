@@ -176,23 +176,46 @@ public class AuthController : ControllerBase
         }
     }
 
+    public class FaceLoginRequest
+    {
+        public double[] Descriptor { get; set; } = null!;
+        public long Timestamp { get; set; } // Unix timestamp (ms)
+        public string? MachineId { get; set; } // HWID from Agent
+        public string? LivenessToken { get; set; } // Token from frontend challenge
+    }
+
     [HttpPost("face-login")]
-    public async Task<ActionResult<LoginResponse>> FaceLogin([FromBody] double[] descriptor)
+    public async Task<ActionResult<LoginResponse>> FaceLogin([FromBody] FaceLoginRequest request)
     {
         try
         {
+            if (request == null || request.Descriptor == null || request.Descriptor.Length == 0)
+            {
+                return BadRequest(new LoginResponse { Success = false, Message = "Dữ liệu khuôn mặt không hợp lệ." });
+            }
+
+            // 1. Kiểm tra "độ tươi" của gói tin (Chống Replay Attack)
+            var nowTs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var timeDiff = Math.Abs(nowTs - request.Timestamp);
+            if (timeDiff > 120000) // Nới lỏng lên 120 giây đề phòng lệch múi giờ
+            {
+                _logger.LogWarning($"Face Login REJECTED: Replay attack suspected. Time diff: {timeDiff}ms");
+                return BadRequest(new LoginResponse { Success = false, Message = "Phiên đăng nhập đã hết hạn. Vui lòng thử lại." });
+            }
+
+            // 2. So sánh khuôn mặt
             var usersCollection = _database.GetCollection<User>("Users");
             var users = await usersCollection
-                .Find(u => u.FaceEmbeddings != null)
+                .Find(u => u.FaceEmbeddings != null && u.FaceEmbeddings.Length > 0)
                 .ToListAsync();
 
             User? matchedUser = null;
             double minDistance = double.MaxValue;
-            double threshold = 0.5; // Stricter threshold for security
+            double threshold = 0.5; // Ngưỡng nhận diện chặt chẽ (càng thấp càng khó)
 
             foreach (var user in users)
             {
-                var distance = EuclideanDistance(descriptor, user.FaceEmbeddings!);
+                var distance = EuclideanDistance(request.Descriptor, user.FaceEmbeddings!);
                 if (distance < threshold && distance < minDistance)
                 {
                     minDistance = distance;
@@ -202,37 +225,33 @@ public class AuthController : ControllerBase
 
             if (matchedUser == null)
             {
-                // Log failure
-                var log = new LogEntry
-                {
-                    LogType = "Auth",
-                    Severity = "Warning",
-                    Message = "Face Login failed: No matching face found",
-                    ComputerName = "WebClient",
-                    IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
-                    ActionTaken = "Access Denied",
-                    Timestamp = DateTime.Now
-                };
-                await _logsCollection.InsertOneAsync(log);
-
-                return Unauthorized(new LoginResponse
-                {
-                    Success = false,
-                    Message = "Không nhận diện được khuôn mặt hoặc chưa đăng ký Face ID"
-                });
+                // Ghi nhật ký lỗi nhận diện
+                await LogAuthFailure($"Face Login failed: No matching face found for current session (MinDist: {minDistance})");
+                return Unauthorized(new LoginResponse { Success = false, Message = "Không nhận diện được khuôn mặt hoặc chưa đăng ký Face ID" });
             }
 
-            // Log Attendance
+            // 3. Hardware Binding (Chỉ áp dụng cho người dùng đã đăng ký máy tính)
+            if (!string.IsNullOrEmpty(matchedUser.RegisteredMachineId) && !string.IsNullOrEmpty(request.MachineId) && request.MachineId != "unknown_web_client")
+            {
+                if (matchedUser.RegisteredMachineId != request.MachineId)
+                {
+                    _logger.LogCritical($"SECURITY ALERT: User {matchedUser.Username} attempted face login from unauthorized machine {request.MachineId}");
+                    await LogAuthFailure($"Hardware Mismatch: Expected {matchedUser.RegisteredMachineId}, got {request.MachineId}");
+                    return Unauthorized(new LoginResponse { Success = false, Message = "Truy cập bị từ chối: Tài khoản của bạn chỉ được phép đăng nhập trên máy tính đã đăng ký." });
+                }
+            }
+
+            // Ghi nhật ký điểm danh (Cần dùng IMongoDatabase trực tiếp nếu collection chưa được khai báo ở constructor)
             var attendanceLog = new AttendanceLog
             {
                 UserId = matchedUser.Id!,
-                UserName = matchedUser.FullName, // Use FullName for display
+                UserName = matchedUser.FullName,
                 CheckInTime = DateTime.Now,
                 Method = "FaceID"
             };
             await _database.GetCollection<AttendanceLog>("AttendanceLogs").InsertOneAsync(attendanceLog);
 
-            // Generate Token
+            // Tạo Token
             string token = GenerateJwtToken(matchedUser);
 
             return Ok(new LoginResponse
@@ -253,8 +272,23 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi Face Login");
-            return StatusCode(500, new LoginResponse { Success = false, Message = ex.Message });
+            return StatusCode(500, new LoginResponse { Success = false, Message = "Lỗi hệ thống trong khi xác thực khuôn mặt: " + ex.Message });
         }
+    }
+
+    private async Task LogAuthFailure(string reason)
+    {
+        var log = new LogEntry
+        {
+            LogType = "Auth",
+            Severity = "Warning",
+            Message = reason,
+            ComputerName = "WebClient",
+            IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            ActionTaken = "Access Denied",
+            Timestamp = DateTime.Now
+        };
+        await _logsCollection.InsertOneAsync(log);
     }
 
     private static double EuclideanDistance(double[] a, double[] b)
