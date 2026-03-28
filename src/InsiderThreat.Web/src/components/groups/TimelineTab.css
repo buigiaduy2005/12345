@@ -2,249 +2,234 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    padding: 10px;
 }
 
+/* --- Header Section --- */
 .timeline-header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
+    align-items: flex-end;
 }
 
-.timeline-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background: #d1fae5;
-    color: #059669;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-}
-
-.timeline-breadcrumb {
-    margin: 0;
-    font-size: 13px;
-    color: var(--color-text-muted);
+.timeline-title {
+    margin: 8px 0 0 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--color-text-main);
 }
 
 .timeline-actions {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
-.tl-btn-outline {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--color-border);
-    background: var(--color-surface);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    transition: all 0.2s;
+.glass-tag {
+    background: var(--color-primary-light) !important;
+    border: 1px solid var(--color-border) !important;
+    color: var(--color-primary) !important;
+    font-weight: 600;
 }
 
-.tl-btn-outline:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-}
-
-.tl-btn-primary {
-    padding: 7px 16px;
-    border-radius: 8px;
-    border: none;
-    background: var(--color-primary, #1d4ed8);
-    color: white;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-.tl-btn-primary:hover { opacity: 0.9; }
-
-/* Main Gantt Layout */
-.timeline-body {
-    display: flex;
+/* --- Main Gantt Layout --- */
+.timeline-container {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 16px;
     overflow: hidden;
-    min-height: 300px;
 }
 
-.tl-left {
-    width: 200px;
-    flex-shrink: 0;
+.timeline-body-wrapper {
+    display: flex;
+}
+
+/* -- Left Panel: Tasks/Phases -- */
+.tl-left-panel {
+    width: 280px;
     border-right: 1px solid var(--color-border);
+    background: var(--color-surface-lighter);
+    flex-shrink: 0;
 }
 
-.tl-col-header {
-    padding: 12px 16px;
+.tl-col-heading {
+    padding: 12px 20px;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.5px;
     color: var(--color-text-muted);
+    letter-spacing: 1px;
     border-bottom: 1px solid var(--color-border);
-    height: 40px;
-    display: flex;
-    align-items: center;
 }
 
-.tl-group-row {
+.tl-phase-header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--color-border);
+    gap: 10px;
+    padding: 12px 20px;
+    background: var(--color-surface-lighter);
     cursor: pointer;
-    background: var(--color-background);
-    user-select: none;
+    border-bottom: 1px solid var(--color-border);
+    transition: background 0.2s;
 }
 
-.tl-group-name {
+.tl-phase-header:hover {
+    background: var(--color-surface);
+}
+
+.phase-name {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--color-text-main);
 }
 
-.tl-task-row {
-    padding: 9px 16px 9px 32px;
-    font-size: 12px;
-    color: var(--color-text-muted);
-    border-bottom: 1px solid var(--color-border);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    height: 38px;
+.tl-task-item {
     display: flex;
     align-items: center;
+    gap: 12px;
+    padding: 10px 20px 10px 40px;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 12px;
+    color: var(--color-text-muted);
 }
 
-/* Right Gantt */
-.tl-right {
+.task-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+/* -- Right Panel: Timeline Tracks -- */
+.tl-gantt-panel {
     flex: 1;
     overflow-x: auto;
 }
 
-.tl-date-header {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    height: 40px;
+.tl-time-header {
+    display: flex;
     border-bottom: 1px solid var(--color-border);
-    background: var(--color-background);
+    background: var(--color-surface-lighter);
 }
 
-.tl-date-header span {
-    padding: 0 8px;
+.tl-time-col {
+    flex-shrink: 0;
+    width: 120px;
+    padding: 12px 0;
+    text-align: center;
     font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+    font-weight: 600;
     color: var(--color-text-muted);
-    display: flex;
-    align-items: center;
     border-right: 1px solid var(--color-border);
 }
 
-.tl-gantt-group-row {
-    height: 41px;
-    border-bottom: 1px solid var(--color-border);
-    background: var(--color-background);
+.tl-gantt-content {
+    position: relative;
+    min-width: 840px; /* 7 weeks * 120px */
 }
 
-.tl-gantt-bar-row {
-    height: 38px;
+.tl-phase-empty-row {
+    height: 41px; /* Matches .tl-phase-header height */
+    border-bottom: 1px solid var(--color-border);
+}
+
+.tl-bar-row {
+    height: 37px; /* Matches .tl-task-item height */
     border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
-    padding: 0 8px;
-}
-
-.tl-bar-track {
-    flex: 1;
+    padding: 0 10px;
     position: relative;
-    height: 24px;
 }
 
-.tl-bar {
-    position: absolute;
-    top: 0;
+.tl-bar-container {
+    width: 100%;
     height: 100%;
-    border-radius: 12px;
+    position: relative;
+}
+
+.tl-task-bar {
+    position: absolute;
+    height: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 10px;
+    border-left: 3px solid transparent;
     display: flex;
     align-items: center;
     padding: 0 10px;
     font-size: 10px;
     font-weight: 700;
-    white-space: nowrap;
-    letter-spacing: 0.3px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
+    overflow: hidden;
 }
 
-/* Milestones */
-.tl-milestones {
+.tl-task-bar:hover {
+    filter: brightness(1.2);
+    transform: translateY(-50%) scaleY(1.1);
+}
+
+.tl-bar-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.tl-bar-label {
+    position: relative;
+    z-index: 2;
+}
+
+/* --- Milestones Footer --- */
+.tl-milestones-footer {
+    margin-top: 12px;
+}
+
+.footer-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin-bottom: 16px;
+}
+
+.milestone-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.milestone-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 16px;
-    padding: 24px;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.2s;
 }
 
-.tl-milestones h3 {
-    font-size: 16px;
-    font-weight: 700;
-    margin: 0 0 16px 0;
+.milestone-card.is-done {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.m-icon {
+    font-size: 24px;
+    color: var(--color-border);
+}
+
+.milestone-card.is-done .m-icon {
+    color: #10b981;
+}
+
+.m-name {
+    font-size: 14px;
+    font-weight: 600;
     color: var(--color-text-main);
 }
 
-.milestone-list {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-}
-
-.milestone-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 14px;
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    color: var(--color-text-muted);
-    transition: all 0.2s;
-}
-
-.milestone-item.done {
-    border-color: #10b981;
-    background: #f0fdf4;
-    color: #059669;
-}
-
-.milestone-item .material-symbols-outlined {
-    font-size: 20px;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.milestone-name {
-    margin: 0 0 2px 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: inherit;
-}
-
-.milestone-date {
-    margin: 0;
+.m-date {
     font-size: 12px;
-}
-
-@media (max-width: 768px) {
-    .milestone-list { grid-template-columns: repeat(2, 1fr); }
-    .tl-left { width: 140px; }
+    color: var(--color-text-muted);
 }

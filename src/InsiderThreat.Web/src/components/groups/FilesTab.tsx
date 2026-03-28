@@ -1,7 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { message, Spin, Avatar, Tooltip } from 'antd';
+import { message, Spin, Avatar, Tooltip, Tag, Progress, Button, Input, Empty } from 'antd';
+import { 
+    CloudUploadOutlined, SearchOutlined, DownloadOutlined, 
+    FileOutlined, FilePdfOutlined, FileWordOutlined, 
+    FileExcelOutlined, FileZipOutlined, FileImageOutlined,
+    UserAddOutlined, MoreOutlined, DatabaseOutlined
+} from '@ant-design/icons';
 import { api, API_BASE_URL } from '../../services/api';
 import './FilesTab.css';
 
@@ -15,16 +21,16 @@ interface FileItem {
     uploadDate: string;
 }
 
-const FILE_ICONS: Record<string, { icon: string; color: string; bg: string }> = {
-    pdf: { icon: 'picture_as_pdf', color: '#ef4444', bg: '#fef2f2' },
-    doc: { icon: 'description', color: '#3b82f6', bg: '#eff6ff' },
-    docx: { icon: 'description', color: '#3b82f6', bg: '#eff6ff' },
-    xls: { icon: 'table_chart', color: '#10b981', bg: '#f0fdf4' },
-    xlsx: { icon: 'table_chart', color: '#10b981', bg: '#f0fdf4' },
-    zip: { icon: 'folder_zip', color: '#f59e0b', bg: '#fffbeb' },
-    rar: { icon: 'folder_zip', color: '#f59e0b', bg: '#fffbeb' },
-    other: { icon: 'insert_drive_file', color: '#94a3b8', bg: '#f8fafc' },
-    image: { icon: 'image', color: '#8b5cf6', bg: '#f5f3ff' },
+const FILE_ICONS_CONFIG: Record<string, { icon: any; color: string; bg: string }> = {
+    pdf: { icon: <FilePdfOutlined />, color: '#ff4d4f', bg: 'rgba(255, 77, 79, 0.1)' },
+    doc: { icon: <FileWordOutlined />, color: '#1890ff', bg: 'rgba(24, 144, 255, 0.1)' },
+    docx: { icon: <FileWordOutlined />, color: '#1890ff', bg: 'rgba(24, 144, 255, 0.1)' },
+    xls: { icon: <FileExcelOutlined />, color: '#52c41a', bg: 'rgba(82, 196, 26, 0.1)' },
+    xlsx: { icon: <FileExcelOutlined />, color: '#52c41a', bg: 'rgba(82, 196, 26, 0.1)' },
+    zip: { icon: <FileZipOutlined />, color: '#faad14', bg: 'rgba(250, 173, 20, 0.1)' },
+    rar: { icon: <FileZipOutlined />, color: '#faad14', bg: 'rgba(250, 173, 20, 0.1)' },
+    image: { icon: <FileImageOutlined />, color: '#722ed1', bg: 'rgba(114, 46, 209, 0.1)' },
+    other: { icon: <FileOutlined />, color: '#8c8c8c', bg: 'rgba(140, 140, 140, 0.1)' },
 };
 
 interface Member {
@@ -97,7 +103,11 @@ export default function FilesTab() {
     const getFileType = (fileName: string) => {
         const ext = fileName.split('.').pop()?.toLowerCase() || '';
         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
-        return ext || 'other';
+        if (['pdf'].includes(ext)) return 'pdf';
+        if (['doc', 'docx'].includes(ext)) return 'doc';
+        if (['xls', 'xlsx'].includes(ext)) return 'xls';
+        if (['zip', 'rar'].includes(ext)) return 'zip';
+        return 'other';
     };
 
     const formatSize = (bytes: number) => {
@@ -108,31 +118,40 @@ export default function FilesTab() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     };
 
-    const filtered = files.filter(f => f.fileName.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filtered = useMemo(() => 
+        files.filter(f => f.fileName.toLowerCase().includes(searchQuery.toLowerCase())),
+    [files, searchQuery]);
+
+    const totalStorage = useMemo(() => files.reduce((acc, f) => acc + f.size, 0), [files]);
+    const storageLimit = 2 * 1024 * 1024 * 1024; // 2GB
+    const storagePercent = (totalStorage / storageLimit) * 100;
 
     if (loading) return <div className="loading-files"><Spin size="large" /></div>;
 
     return (
-        <div className="filesTab">
+        <div className="filesTab animate-in">
             <div className="files-header">
-                <div>
-                    <p className="files-section-label">Tài liệu dự án</p>
-                    <h2 className="files-title">Thư viện tệp tin ({files.length})</h2>
+                <div className="header-info">
+                    <span className="section-label">TÀI LIỆU DỰ ÁN</span>
+                    <h2 className="files-title">Thư viện tệp tin <Tag className="count-tag">{files.length}</Tag></h2>
                 </div>
                 <div className="files-header-actions">
-                    <div className="files-search">
-                        <span className="material-symbols-outlined">search</span>
-                        <input
-                            type="text"
-                            placeholder="Tìm kiếm tệp tin..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <button className="upload-btn" disabled={uploading} onClick={() => inputRef.current?.click()}>
-                        {uploading ? <Spin size="small" /> : <span className="material-symbols-outlined">cloud_upload</span>}
-                        {uploading ? 'Đang tải...' : 'Tải lên'}
-                    </button>
+                    <Input 
+                        prefix={<SearchOutlined />} 
+                        placeholder="Tìm kiếm tệp tin..." 
+                        style={{ width: 280, borderRadius: 10 }}
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                    />
+                    <Button 
+                        type="primary" 
+                        icon={<CloudUploadOutlined />} 
+                        loading={uploading} 
+                        onClick={() => inputRef.current?.click()}
+                        className="upload-main-btn"
+                    >
+                        Tải lên
+                    </Button>
                     <input ref={inputRef} type="file" multiple hidden onChange={(e) => {
                         handleFileUpload(Array.from(e.target.files || []));
                     }} />
@@ -140,9 +159,10 @@ export default function FilesTab() {
             </div>
 
             <div className="files-main-layout">
-                <div className="files-grid-area">
+                <div className="files-content-area">
+                    {/* Droppable Zone */}
                     <div
-                        className={`drop-zone ${dragOver ? 'active' : ''}`}
+                        className={`modern-drop-zone ${dragOver ? 'active' : ''}`}
                         onDragEnter={e => { e.preventDefault(); e.stopPropagation(); setDragOver(true); }}
                         onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragOver(true); }}
                         onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setDragOver(false); }}
@@ -155,32 +175,44 @@ export default function FilesTab() {
                             }
                         }}
                     >
-                        <span className="material-symbols-outlined">cloud_upload</span>
-                        <p>Kéo và thả tệp tin vào đây để chia sẻ nhanh</p>
+                        <div className="drop-zone-content">
+                            <div className="drop-icon-wrap">
+                                <CloudUploadOutlined />
+                            </div>
+                            <div className="drop-text">
+                                <h3>Kéo & thả tệp tin để tải lên</h3>
+                                <p>Hỗ trợ tải lên nhiều tệp cùng lúc, kích thước tối đa 50MB mỗi tệp</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="files-grid">
                         {filtered.map(file => {
                             const type = getFileType(file.fileName);
-                            const iconConfig = FILE_ICONS[type] || FILE_ICONS['other'];
+                            const config = FILE_ICONS_CONFIG[type] || FILE_ICONS_CONFIG['other'];
                             return (
-                                <div key={file.id} className="file-card">
-                                    <div className="file-card-icon" style={{ background: iconConfig.bg }}>
-                                        <span className="material-symbols-outlined" style={{ color: iconConfig.color, fontSize: 36 }}>
-                                            {iconConfig.icon}
-                                        </span>
+                                <div key={file.id} className="modern-file-card">
+                                    <div className="file-card-visual" style={{ background: config.bg, color: config.color }}>
+                                        {config.icon}
                                     </div>
-                                    <div className="file-card-info">
-                                        <Tooltip title={file.fileName}>
-                                            <p className="file-name">{file.fileName}</p>
+                                    <div className="file-card-details">
+                                        <Tooltip title={file.fileName} placement="topLeft">
+                                            <h4 className="file-name">{file.fileName}</h4>
                                         </Tooltip>
                                         <div className="file-meta">
-                                            <span className="file-type-label">{type.toUpperCase()}</span>
-                                            <span className="file-size">• {formatSize(file.size)}</span>
-                                            <button className="file-download-btn" onClick={() => handleDownload(file)}>
-                                                <span className="material-symbols-outlined">download</span>
-                                            </button>
+                                            <span className="file-size">{formatSize(file.size)}</span>
+                                            <span className="file-dot">•</span>
+                                            <span className="file-uploader">{file.uploaderName}</span>
                                         </div>
+                                    </div>
+                                    <div className="file-card-actions">
+                                        <Button 
+                                            type="text" 
+                                            shape="circle" 
+                                            icon={<DownloadOutlined />} 
+                                            onClick={() => handleDownload(file)} 
+                                        />
+                                        <Button type="text" shape="circle" icon={<MoreOutlined />} />
                                     </div>
                                 </div>
                             );
@@ -188,52 +220,60 @@ export default function FilesTab() {
                     </div>
 
                     {filtered.length === 0 && (
-                        <div className="no-files">
-                            <span className="material-symbols-outlined">folder_open</span>
-                            <p>Không tìm thấy tệp tin nào</p>
+                        <div className="empty-files-container">
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có tệp tin nào trong dự án này" />
                         </div>
                     )}
                 </div>
 
-                <div className="files-sidebar">
-                    <div className="files-panel">
-                        <div className="files-panel-header">
-                            <h3>Thành viên ({members.length})</h3>
+                <div className="files-side-panel">
+                    <div className="side-card storage-card">
+                        <div className="side-card-header">
+                            <DatabaseOutlined /> <span>Lưu trữ Dự án</span>
                         </div>
-                        <div className="files-team-list">
+                        <div className="storage-meter">
+                            <Progress 
+                                percent={Math.round(storagePercent)} 
+                                strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }}
+                                size="small"
+                                showInfo={false}
+                            />
+                            <div className="storage-stats">
+                                <span className="used">{formatSize(totalStorage)} dùng</span>
+                                <span className="total">trên {formatSize(storageLimit)}</span>
+                            </div>
+                        </div>
+                        <Button block type="dashed" size="small" style={{ marginTop: 12 }}>Nâng cấp bộ nhớ</Button>
+                    </div>
+
+                    <div className="side-card team-card">
+                        <div className="side-card-header">
+                            <span>Thành viên Truy cập</span>
+                            <span className="member-count">{members.length}</span>
+                        </div>
+                        <div className="member-list-mini">
                             {members.map(m => (
-                                <div key={m.id} className="files-team-member">
-                                    <div className="files-avatar-wrap">
-                                        <Avatar src={m.avatarUrl || `https://ui-avatars.com/api/?name=${m.fullName}`} />
-                                        <span className={`files-status-dot files-status--online`}></span>
-                                    </div>
-                                    <div>
-                                        <p className="files-member-name">{m.fullName}</p>
-                                        <p className="files-member-role">{m.roleLevel || 'Thành viên'}</p>
+                                <div key={m.id} className="mini-member-item">
+                                    <Avatar size="small" src={m.avatarUrl || `https://ui-avatars.com/api/?name=${m.fullName}`} />
+                                    <div className="member-info">
+                                        <p className="name">{m.fullName}</p>
+                                        <p className="role">{m.roleLevel || 'Cộng tác viên'}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <button className="files-invite-btn">
-                            <span className="material-symbols-outlined">add</span>
-                            Thêm thành viên
-                        </button>
-                    </div>
-
-                    <div className="files-panel storage-panel">
-                        <h3 className="storage-title">Lưu trữ dự án</h3>
-                        <div className="storage-bar">
-                            <div className="storage-fill" style={{ width: '15%' }}></div>
-                        </div>
-                        <div className="storage-meta">
-                            <span>{formatSize(files.reduce((acc, f) => acc + f.size, 0))} dùng</span>
-                            <span>2 GB giới hạn</span>
-                        </div>
+                        <Button 
+                            block 
+                            type="primary" 
+                            ghost 
+                            icon={<UserAddOutlined />} 
+                            style={{ marginTop: 16, borderRadius: 8 }}
+                        >
+                            Mời cộng tác
+                        </Button>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
-
-

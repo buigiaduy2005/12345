@@ -33,6 +33,12 @@ namespace InsiderThreat.Server.Models
         [BsonElement("progress")]
         public int Progress { get; set; } = 0;
 
+        [BsonElement("phase")]
+        public string? Phase { get; set; } // Phân nhóm cho Roadmaps/Gantt
+
+        [BsonElement("startDate")]
+        public DateTime? StartDate { get; set; }
+
         [BsonElement("deadline")]
         public DateTime? Deadline { get; set; }
 

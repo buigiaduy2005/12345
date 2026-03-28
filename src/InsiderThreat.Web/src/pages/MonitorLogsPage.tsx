@@ -27,6 +27,8 @@ import {
 } from '@ant-design/icons';
 import { Table, Tag, Card, Row, Col, Statistic, Select, Input, Space, Button, Typography, Avatar, Badge, App, Breadcrumb, Modal, Checkbox, Upload, Empty } from 'antd';
 import { monitorService } from '../services/monitorService';
+import { useTheme } from '../context/ThemeContext';
+import './MonitorLogsPage.css';
 import type { MonitorLog, MonitorSummary } from '../services/monitorService';
 import { 
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -55,6 +57,8 @@ interface MachineInfo {
 const MonitorLogsPage: React.FC = () => {
     const { t } = useTranslation();
     const { message } = App.useApp();
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     const [loading, setLoading] = useState(false);
     const [allLogs, setAllLogs] = useState<MonitorLog[]>([]);
     const [summary, setSummary] = useState<MonitorSummary | null>(null);
@@ -268,7 +272,7 @@ const MonitorLogsPage: React.FC = () => {
                 <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(log.timestamp).format('HH:mm:ss DD/MM')}</Text>
             </div>
             <div style={{ marginBottom: 6 }}>
-                <Tag color="blue" size="small">{log.logType}</Tag>
+                <Tag color="blue">{log.logType}</Tag>
             </div>
             <div style={{ fontSize: 13, color: '#262626', marginBottom: 8, lineHeight: '1.5' }}>
                 {log.detectedKeyword && <Text type="danger" strong>[{log.detectedKeyword}] </Text>}
@@ -580,24 +584,17 @@ const MonitorLogsPage: React.FC = () => {
 
     // ─── RENDER ──────────────────────────
     return (
-        <div style={{ padding: isMobile ? '12px' : '24px', paddingBottom: '80px' }}>
+        <div className={`monitor-logs-container ${isMobile ? 'mobile' : ''} ${isDark ? 'dark' : ''}`}>
             {/* 📱 Header & Navigation */}
-            <div style={{ 
-                marginBottom: isMobile ? '16px' : '24px', 
-                display: 'flex', 
-                flexDirection: isMobile ? 'column' : 'row', 
-                justifyContent: 'space-between', 
-                alignItems: isMobile ? 'flex-start' : 'center',
-                gap: 12 
-            }}>
+            <div className={`monitor-header ${isMobile ? 'mobile' : ''}`}>
                 <div>
                     {selectedMachine ? (
                         <Breadcrumb items={[
-                            { title: <span onClick={handleBack} style={{ cursor: 'pointer', color: '#1890ff' }}><HomeOutlined /> {!isMobile && 'Tất cả máy tính'}</span> },
-                            { title: <span><DesktopOutlined /> {selectedMachine.computerName}</span> },
+                            { title: <span onClick={handleBack} style={{ cursor: 'pointer', color: 'var(--color-primary)' }}><HomeOutlined /> {!isMobile && 'Tất cả máy tính'}</span> },
+                            { title: <span style={{ color: 'var(--color-text-main)' }}><DesktopOutlined /> {selectedMachine.computerName}</span> },
                         ]} />
                     ) : null}
-                    <Title level={isMobile ? 4 : 2} style={{ margin: selectedMachine ? '4px 0 0' : 0 }}>
+                    <Title level={isMobile ? 4 : 2} className="monitor-title">
                         <SecurityScanOutlined /> {selectedMachine 
                             ? (isMobile ? 'Chi tiết' : `Chi tiết giám sát - ${selectedMachine.computerName}`)
                             : (isMobile ? 'Giám sát Agent' : t('monitor.title', 'Giám sát Agent Máy tính Cá nhân'))
@@ -646,21 +643,23 @@ const MonitorLogsPage: React.FC = () => {
             {/* 📊 Summary Stats */}
             <Row gutter={[12, 12]} style={{ marginBottom: isMobile ? '16px' : '24px' }}>
                 <Col span={isMobile ? 12 : 6}>
-                    <Card size="small" variant="borderless" style={{ background: '#f0f5ff', borderRadius: 12 }}>
+                    <Card size="small" className="stat-card total" bordered={false}>
                         <Statistic
                             title="Tổng hôm nay"
                             value={summary?.totalToday || 0}
-                            valueStyle={{ fontSize: isMobile ? 20 : 24, color: '#1d39c4', fontWeight: 'bold' }}
+                            valueStyle={{ fontSize: isMobile ? 20 : 24 }}
+                            className="stat-value total"
                             prefix={<SecurityScanOutlined />}
                         />
                     </Card>
                 </Col>
                 <Col span={isMobile ? 12 : 6}>
-                    <Card size="small" variant="borderless" style={{ background: '#fff1f0', borderRadius: 12 }}>
+                    <Card size="small" className="stat-card critical" bordered={false}>
                         <Statistic
                             title="Nguy hiểm"
                             value={summary?.criticalToday || 0}
-                            valueStyle={{ fontSize: isMobile ? 20 : 24, color: '#cf1322', fontWeight: 'bold' }}
+                            valueStyle={{ fontSize: isMobile ? 20 : 24 }}
+                            className="stat-value critical"
                             prefix={<WarningOutlined />}
                         />
                     </Card>
@@ -668,13 +667,13 @@ const MonitorLogsPage: React.FC = () => {
                 {!isMobile && (
                     <>
                         <Col span={6}>
-                            <Card variant="borderless" style={{ background: '#e6fffb', borderRadius: 12 }}>
-                                <Statistic title="Ảnh chụp" value={summary?.screenshotsToday || 0} valueStyle={{ color: '#08979c' }} prefix={<CameraOutlined />} />
+                            <Card className="stat-card screenshots" bordered={false}>
+                                <Statistic title="Ảnh chụp" value={summary?.screenshotsToday || 0} className="stat-value screenshots" prefix={<CameraOutlined />} />
                             </Card>
                         </Col>
                         <Col span={6}>
-                            <Card variant="borderless" style={{ background: '#f9f0ff', borderRadius: 12 }}>
-                                <Statistic title="Từ khóa" value={summary?.keywordsToday || 0} valueStyle={{ color: '#531dab' }} prefix={<KeyOutlined />} />
+                            <Card className="stat-card keywords" bordered={false}>
+                                <Statistic title="Từ khóa" value={summary?.keywordsToday || 0} className="stat-value keywords" prefix={<KeyOutlined />} />
                             </Card>
                         </Col>
                     </>
@@ -685,15 +684,21 @@ const MonitorLogsPage: React.FC = () => {
             {!selectedMachine && !isArchiveMode && allLogs.length > 0 && (
                 <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                     <Col xs={24} lg={12}>
-                        <Card title={<Space><LineChartOutlined /> Xu hướng</Space>} size="small" bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                        <Card title={<Space><LineChartOutlined /> Xu hướng</Space>} size="small" className="chart-card">
                             <div style={{ width: '100%', height: isMobile ? 180 : 300 }}>
                                 <ResponsiveContainer>
                                     <AreaChart data={chartData.trend}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                        <XAxis dataKey="time" hide={isMobile} />
-                                        <YAxis axisLine={false} tickLine={false} style={{ fontSize: '10px' }} />
-                                        <Tooltip />
-                                        <Area type="monotone" dataKey="count" stroke="#8884d8" fill="#f9f0ff" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#333' : '#f0f0f0'} />
+                                        <XAxis dataKey="time" hide={isMobile} stroke={isDark ? '#888' : '#666'} />
+                                        <YAxis axisLine={false} tickLine={false} style={{ fontSize: '10px' }} stroke={isDark ? '#888' : '#666'} />
+                                        <Tooltip 
+                                            contentStyle={{ 
+                                                backgroundColor: isDark ? '#1E1E1E' : '#fff',
+                                                borderColor: isDark ? '#333' : '#eee',
+                                                color: isDark ? '#fff' : '#000'
+                                            }}
+                                        />
+                                        <Area type="monotone" dataKey="count" stroke="var(--color-primary)" fill="var(--color-primary-light)" />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
@@ -702,26 +707,37 @@ const MonitorLogsPage: React.FC = () => {
                     {!isMobile && (
                         <>
                             <Col xs={24} md={12} lg={6}>
-                                <Card title={<Space><PieChartOutlined /> Loại vi phạm</Space>} size="small" bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                <Card title={<Space><PieChartOutlined /> Loại vi phạm</Space>} size="small" className="chart-card">
                                     <div style={{ width: '100%', height: 300 }}>
                                         <ResponsiveContainer>
                                             <PieChart>
                                                 <Pie data={chartData.types} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">
                                                     {chartData.types.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                                 </Pie>
-                                                <Tooltip />
+                                                <Tooltip 
+                                                    contentStyle={{ 
+                                                        backgroundColor: isDark ? '#1E1E1E' : '#fff',
+                                                        borderColor: isDark ? '#333' : '#eee'
+                                                    }}
+                                                />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </Card>
                             </Col>
                             <Col xs={24} md={12} lg={6}>
-                                <Card title={<Space><BarChartOutlined /> Top rủi ro</Space>} size="small" bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                <Card title={<Space><BarChartOutlined /> Top rủi ro</Space>} size="small" className="chart-card">
                                     <div style={{ width: '100%', height: 300 }}>
                                         <ResponsiveContainer>
                                             <BarChart layout="vertical" data={chartData.topMachines}>
                                                 <XAxis type="number" hide />
-                                                <YAxis dataKey="name" type="category" width={80} style={{ fontSize: '11px' }} />
+                                                <YAxis dataKey="name" type="category" width={80} style={{ fontSize: '11px' }} stroke={isDark ? '#888' : '#666'} />
+                                                <Tooltip 
+                                                    contentStyle={{ 
+                                                        backgroundColor: isDark ? '#1E1E1E' : '#fff',
+                                                        borderColor: isDark ? '#333' : '#eee'
+                                                    }}
+                                                />
                                                 <Bar dataKey="count" fill="#ff4d4f" radius={[0, 4, 4, 0]} />
                                             </BarChart>
                                         </ResponsiveContainer>
@@ -746,7 +762,7 @@ const MonitorLogsPage: React.FC = () => {
                             {isMobile ? (
                                 filteredArchiveLogs.map(log => renderMobileLogItem(log))
                             ) : (
-                                <Card variant="borderless" style={{ borderRadius: 12 }}>
+                                <Card className="chart-card">
                                     <Table columns={columns} dataSource={filteredArchiveLogs} size="small" rowKey={(r) => `${r.timestamp}-${Math.random()}`} />
                                 </Card>
                             )}
@@ -772,22 +788,35 @@ const MonitorLogsPage: React.FC = () => {
                         {!isMobile && detailLogs.length > 0 && (
                             <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                                 <Col span={16}>
-                                    <Card title="Hoạt động gần đây" size="small" style={{ borderRadius: 12 }}>
+                                    <Card title="Hoạt động gần đây" size="small" className="chart-card">
                                         <div style={{ height: 150 }}>
                                             <ResponsiveContainer>
                                                 <AreaChart data={detailChartData.trend}>
-                                                    <Area type="monotone" dataKey="count" stroke="#1890ff" fill="#e6f7ff" />
+                                                    <XAxis dataKey="time" hide stroke={isDark ? '#888' : '#666'} />
+                                                    <Tooltip 
+                                                        contentStyle={{ 
+                                                            backgroundColor: isDark ? '#1E1E1E' : '#fff',
+                                                            borderColor: isDark ? '#333' : '#eee'
+                                                        }}
+                                                    />
+                                                    <Area type="monotone" dataKey="count" stroke="var(--color-primary)" fill="var(--color-primary-light)" />
                                                 </AreaChart>
                                             </ResponsiveContainer>
                                         </div>
                                     </Card>
                                 </Col>
                                 <Col span={8}>
-                                    <Card title="Loại vi phạm" size="small" style={{ borderRadius: 12 }}>
+                                    <Card title="Loại vi phạm" size="small" className="chart-card">
                                         <div style={{ height: 150 }}>
                                             <ResponsiveContainer>
                                                 <PieChart>
-                                                    <Pie data={detailChartData.types} dataKey="value" nameKey="name" outerRadius={50} fill="#1890ff" />
+                                                    <Pie data={detailChartData.types} dataKey="value" nameKey="name" outerRadius={50} fill="var(--color-primary)" />
+                                                    <Tooltip 
+                                                        contentStyle={{ 
+                                                            backgroundColor: isDark ? '#1E1E1E' : '#fff',
+                                                            borderColor: isDark ? '#333' : '#eee'
+                                                        }}
+                                                    />
                                                 </PieChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -801,12 +830,12 @@ const MonitorLogsPage: React.FC = () => {
                                 {detailLogs.map(log => renderMobileLogItem(log))}
                                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16, gap: 12 }}>
                                     <Button disabled={detailPage === 1} onClick={() => setDetailPage(p => p - 1)}>Trước</Button>
-                                    <Tag style={{ margin: 0, display: 'flex', alignItems: 'center' }}>Trang {detailPage}</Tag>
+                                    <Tag style={{ margin: 0, display: 'flex', alignItems: 'center', background: 'var(--color-surface)', color: 'var(--color-text-main)', borderColor: 'var(--color-border)' }}>Trang {detailPage}</Tag>
                                     <Button disabled={detailLogs.length < detailPageSize} onClick={() => setDetailPage(p => p + 1)}>Sau</Button>
                                 </div>
                             </>
                         ) : (
-                            <Card variant="borderless" style={{ borderRadius: 12 }}>
+                            <Card className="chart-card">
                                 <Table columns={columns} dataSource={detailLogs} rowKey="id" loading={loading} pagination={{ current: detailPage, total: detailTotal, onChange: p => setDetailPage(p) }} />
                             </Card>
                         )}
@@ -816,19 +845,25 @@ const MonitorLogsPage: React.FC = () => {
                     <Row gutter={[12, 12]}>
                         {filteredMachines.map(machine => (
                             <Col xs={24} sm={12} lg={8} key={machine.computerName + machine.computerUser}>
-                                <Card onClick={() => handleMachineClick(machine)} hoverable size="small" style={{ borderLeft: `4px solid ${getRiskLevel(machine).color}`, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                <Card 
+                                    onClick={() => handleMachineClick(machine)} 
+                                    hoverable 
+                                    size="small" 
+                                    className="machine-card"
+                                    style={{ borderLeft: `4px solid ${getRiskLevel(machine).color}` }}
+                                >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <Space>
                                             <Avatar icon={<DesktopOutlined />} style={{ backgroundColor: getRiskLevel(machine).color }} />
                                             <div>
-                                                <Text strong>{machine.computerName}</Text>
+                                                <Text strong style={{ color: 'var(--color-text-main)' }}>{machine.computerName}</Text>
                                                 <br />
-                                                <Text type="secondary" style={{ fontSize: 11 }}>{machine.computerUser}</Text>
+                                                <Text style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{machine.computerUser}</Text>
                                             </div>
                                         </Space>
                                         <div style={{ textAlign: 'right' }}>
-                                            <Badge count={machine.totalAlerts} overflowCount={99} color="#1890ff" />
-                                            {machine.criticalAlerts > 0 && <div style={{ color: '#f5222d', fontSize: 10, marginTop: 4 }}>{machine.criticalAlerts} critical</div>}
+                                            <Badge count={machine.totalAlerts} overflowCount={99} color="var(--color-primary)" />
+                                            {machine.criticalAlerts > 0 && <div style={{ color: '#ff4d4f', fontSize: 10, marginTop: 4, fontWeight: 'bold' }}>{machine.criticalAlerts} critical</div>}
                                         </div>
                                     </div>
                                 </Card>

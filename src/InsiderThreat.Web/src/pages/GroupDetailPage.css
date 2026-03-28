@@ -1,7 +1,7 @@
 .groupDetail-container {
     display: flex;
     min-height: 100vh;
-    background: var(--color-background);
+    background: var(--color-bg);
     overflow: hidden;
 }
 
@@ -9,11 +9,11 @@
     flex: 1;
     height: 100vh;
     overflow-y: auto;
-    background: #f8fafc; /* Lighter background for SaaS content */
+    background: var(--color-bg);
 }
 
-[data-theme='dark'] .groupDetail-main-wrapper {
-    background: var(--color-background);
+.dark .groupDetail-main-wrapper {
+    background: var(--color-bg);
 }
 
 .groupDetail {
