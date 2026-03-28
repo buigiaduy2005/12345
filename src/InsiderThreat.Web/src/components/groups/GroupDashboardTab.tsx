@@ -7,17 +7,15 @@ import {
     ClockCircleOutlined, HeartOutlined, MessageOutlined, FileTextOutlined, 
     PlusOutlined, FileZipOutlined, FileExcelOutlined, FilePdfOutlined, 
     FileWordOutlined, RocketOutlined, SafetyCertificateOutlined, SendOutlined,
-    PaperClipOutlined, DownloadOutlined
+    PaperClipOutlined, DownloadOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { api } from '../../services/api';
 import './GroupDashboardTab.css';
-import { 
-    ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, 
-    Tooltip as ChartTooltip, PieChart, Pie, Cell 
-} from 'recharts';
+import ProjectAnalyticsModal from './ProjectAnalyticsModal';
 
+// Kích hoạt tính năng fromNow cho dayjs
 dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
@@ -39,9 +37,8 @@ interface ProjectTask {
     status: 'Todo' | 'InProgress' | 'InReview' | 'Done';
     priority: 'Low' | 'Medium' | 'High';
     assignedTo?: string;
-    dueDate?: string;
-    createdAt?: string;
-    completedAt?: string;
+    startDate?: string;
+    deadline?: string;
     attachments?: any[];
     comments?: any[];
 }
@@ -93,7 +90,8 @@ export default function GroupDashboardTab() {
     const [taskDrawerVisible, setTaskDrawerVisible] = useState(false);
     const [isMemberModalVisible, setIsMemberModalVisible] = useState(false);
     const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+    const [isAnalyticsVisible, setIsAnalyticsVisible] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     
     const [commentText, setCommentText] = useState('');
@@ -127,59 +125,9 @@ export default function GroupDashboardTab() {
     useEffect(() => {
         fetchData();
         const handleResize = () => setIsMobile(window.innerWidth < 768);
-        
-        // Theme Observer
-        const observer = new MutationObserver(() => {
-            setIsDarkMode(document.documentElement.classList.contains('dark'));
-        });
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
         window.addEventListener('resize', handleResize);
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            observer.disconnect();
-        };
+        return () => window.removeEventListener('resize', handleResize);
     }, [groupId]);
-
-    // Theme-based colors for charts
-    const chartTheme = useMemo(() => ({
-        text: isDarkMode ? '#94a3b8' : '#64748b',
-        grid: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-        tooltipBg: isDarkMode ? '#1e1e1e' : '#ffffff',
-        tooltipBorder: isDarkMode ? '#333' : '#e2e8f0'
-    }), [isDarkMode]);
-
-    // ─── CHART CALCULATIONS ──────────────────────────────────────────────────
-    const performanceData = useMemo(() => {
-        const days = 7;
-        const data = [];
-        for (let i = days - 1; i >= 0; i--) {
-            const date = dayjs().subtract(i, 'day');
-            const completedOnDay = tasks.filter(t => 
-                t.status === 'Done' && 
-                t.completedAt && 
-                dayjs(t.completedAt).isSame(date, 'day')
-            ).length;
-            data.push({
-                name: date.format('DD/MM'),
-                completed: completedOnDay
-            });
-        }
-        return data;
-    }, [tasks]);
-
-    const statusPieData = useMemo(() => {
-        const todo = tasks.filter(t => t.status === 'Todo').length;
-        const inProgress = tasks.filter(t => t.status === 'InProgress').length;
-        const inReview = tasks.filter(t => t.status === 'InReview').length;
-        const done = tasks.filter(t => t.status === 'Done').length;
-        return [
-            { name: 'Chờ làm', value: todo, color: '#8b949e' },
-            { name: 'Đang làm', value: inProgress, color: '#1890ff' },
-            { name: 'Đang xem xét', value: inReview, color: '#faad14' },
-            { name: 'Hoàn thành', value: done, color: '#52c41a' },
-        ];
-    }, [tasks]);
 
     // ─── ACTION HANDLERS ─────────────────────────────────────────────────────
 
@@ -202,16 +150,70 @@ export default function GroupDashboardTab() {
 
     const handleCreateTask = async (values: any) => {
         try {
-            await api.post(`/api/groups/${groupId}/tasks`, {
+            const taskData = {
                 ...values,
-                status: 'Todo',
-                dueDate: values.dueDate?.toISOString()
-            });
-            message.success('Đã tạo nhiệm vụ');
+                status: values.status || (isEditing ? selectedTask?.status : 'Todo'),
+                startDate: values.startDate?.toISOString(),
+                deadline: values.deadline?.toISOString()
+            };
+
+            if (isEditing && selectedTask) {
+                await api.patch(`/api/groups/${groupId}/tasks/${selectedTask.id}`, taskData);
+                message.success('Đã cập nhật nhiệm vụ');
+            } else {
+                await api.post(`/api/groups/${groupId}/tasks`, taskData);
+                message.success('Đã tạo nhiệm vụ thành công');
+            }
+
             setIsTaskModalVisible(false);
+            setIsEditing(false);
             taskForm.resetFields();
             fetchData();
-        } catch (err) { message.error('Lỗi khi tạo nhiệm vụ'); }
+            
+            // Nếu đang sửa thì đóng drawer và mở lại hoặc cập nhật selectedTask
+            if (isEditing) {
+                setTaskDrawerVisible(false);
+                setSelectedTask(null);
+            }
+        } catch (err: any) { 
+            console.error('Task action failed:', err.response?.data);
+            message.error('Lỗi: ' + (err.response?.data?.message || 'Yêu cầu không hợp lệ')); 
+        }
+    };
+
+    const handleOpenEdit = () => {
+        if (!selectedTask) return;
+        setIsEditing(true);
+        taskForm.setFieldsValue({
+            title: selectedTask.title,
+            description: selectedTask.description,
+            priority: selectedTask.priority,
+            assignedTo: selectedTask.assignedTo,
+            startDate: selectedTask.startDate ? dayjs(selectedTask.startDate) : null,
+            deadline: selectedTask.deadline ? dayjs(selectedTask.deadline) : null,
+        });
+        setIsTaskModalVisible(true);
+    };
+
+    const handleDeleteTask = (taskId: string) => {
+        Modal.confirm({
+            title: 'Xác nhận xóa nhiệm vụ?',
+            icon: <DeleteOutlined style={{ color: '#ff4d4f' }} />,
+            content: 'Nhiệm vụ này sẽ bị xóa vĩnh viễn và không thể khôi phục.',
+            okText: 'Xác nhận xóa',
+            okType: 'danger',
+            cancelText: 'Hủy bỏ',
+            onOk: async () => {
+                try {
+                    await api.delete(`/api/groups/${groupId}/tasks/${taskId}`);
+                    message.success('Đã xóa nhiệm vụ');
+                    setTaskDrawerVisible(false);
+                    fetchData();
+                } catch (err) {
+                    message.error('Lỗi khi xóa nhiệm vụ');
+                }
+            }
+        });
     };
 
     const handleFileUpload = async (options: any) => {
@@ -280,120 +282,84 @@ export default function GroupDashboardTab() {
                         title={<Space><TeamOutlined /> {t('groups.team_title', 'Đội ngũ dự án')}</Space>} 
                         extra={<PlusOutlined className="icon-btn" onClick={() => { fetchAvailableUsers(); setIsMemberModalVisible(true); }} />}
                     >
-                        <List
-                            dataSource={members}
-                            renderItem={m => (
-                                <List.Item className="member-item">
-                                    <List.Item.Meta
-                                        avatar={<Avatar src={m.avatarUrl} className="glowing-avatar" />}
-                                        title={<span className="text-bright">{m.fullName}</span>}
-                                        description={<Tag color="blue" style={{ fontSize: 10 }}>{m.role || 'Contributor'}</Tag>}
-                                    />
+                        {/* FIX: Thay List bằng .map để tránh cảnh báo Deprecated */}
+                        <div className="custom-member-list">
+                            {members.map(m => (
+                                <div className="member-item-new" key={m.id}>
+                                    <Avatar src={m.avatarUrl} className="glowing-avatar" />
+                                    <div className="member-info-new">
+                                        <div className="text-bright">{m.fullName}</div>
+                                        <Tag color="blue" style={{ fontSize: 9 }}>{m.role || 'Contributor'}</Tag>
+                                    </div>
                                     <Badge status="processing" color="#52c41a" />
-                                </List.Item>
-                            )}
-                        />
+                                </div>
+                            ))}
+                        </div>
                         <Divider style={{ margin: '12px 0' }} />
                         <Button block icon={<MessageOutlined />} className="glass-btn">Mở Chat Nhóm</Button>
-                        
-                        <div style={{ marginTop: 24 }}>
-                            <Title level={5} className="text-bright">Thống kê trạng thái</Title>
-                            <div style={{ height: 200 }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={statusPieData}
-                                            innerRadius={60}
-                                            outerRadius={80}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {statusPieData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <ChartTooltip 
-                                            contentStyle={{ 
-                                                background: chartTheme.tooltipBg, 
-                                                border: `1px solid ${chartTheme.tooltipBorder}`, 
-                                                borderRadius: 8 
-                                            }}
-                                            itemStyle={{ color: isDarkMode ? '#58a6ff' : '#2563eb' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                {statusPieData.map(item => (
-                                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
-                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color }} />
-                                        <Text type="secondary">{item.name}: {item.value}</Text>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </Card>
                 </Col>
 
                 {/* 🚀 CENTER: MISSION CONTROL */}
                 <Col xs={24} lg={12}>
-                    <Card className="glass-panel status-card-hero">
+                    <Card className="glass-panel phase-panel">
                         <div className="phase-header">
                             <div>
-                                <Title level={4} className="text-bright">Hiệu suất nhiệm vụ</Title>
-                                <Text type="secondary">Nhiệm vụ hoàn thành trong 7 ngày qua</Text>
+                                <Title level={4} className="text-bright">Giai đoạn thực thi</Title>
+                                <Text type="secondary">Tiến độ tổng thể: {projectProgress}%</Text>
                             </div>
                             <RocketOutlined style={{ fontSize: 32, color: '#1890ff' }} />
                         </div>
+                        <Progress percent={projectProgress} status="active" strokeColor={{ '0%': '#10b981', '100%': '#3b82f6' }} />
                         
-                        <div style={{ height: 200, width: '100%', marginTop: 20 }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={performanceData}>
-                                    <defs>
-                                        <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#1890ff" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#1890ff" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartTheme.grid} />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: chartTheme.text, fontSize: 12 }} />
-                                    <YAxis hide />
-                                    <ChartTooltip 
-                                        contentStyle={{ 
-                                            background: chartTheme.tooltipBg, 
-                                            border: `1px solid ${chartTheme.tooltipBorder}`, 
-                                            borderRadius: 8 
-                                        }}
-                                        itemStyle={{ color: isDarkMode ? '#58a6ff' : '#2563eb' }}
-                                    />
-                                    <Area type="monotone" dataKey="completed" stroke="#1890ff" fillOpacity={1} fill="url(#colorCompleted)" strokeWidth={3} />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                        <div className="milestones-row">
+                            <div className={`milestone ${projectProgress >= 0 ? 'active' : ''}`}><span>Khởi tạo</span></div>
+                            <div className={`milestone ${projectProgress > 25 ? 'active' : ''}`}><span>Thực thi</span></div>
+                            <div className={`milestone ${projectProgress > 75 ? 'active' : ''}`}><span>Kiểm thử</span></div>
+                            <div className={`milestone ${projectProgress === 100 ? 'active' : ''}`}><span>Bàn giao</span></div>
                         </div>
                     </Card>
 
                     <div className="task-canvas-header">
                         <Title level={4} className="text-bright">Nhiệm vụ chiến lược</Title>
-                        <Button type="primary" shape="round" icon={<PlusOutlined />} onClick={() => setIsTaskModalVisible(true)}>Thêm Task</Button>
+                        <Space>
+                            <Button 
+                                icon={<RocketOutlined />} 
+                                className="glass-btn"
+                                onClick={() => setIsAnalyticsVisible(true)}
+                            >
+                                Phân tích Trí tuệ
+                            </Button>
+                            <Button 
+                                type="primary" 
+                                shape="round" 
+                                icon={<PlusOutlined />} 
+                                onClick={() => { 
+                                    setIsEditing(false); 
+                                    taskForm.resetFields(); 
+                                    setIsTaskModalVisible(true); 
+                                }}
+                            >
+                                Thêm Task
+                            </Button>
+                        </Space>
                     </div>
 
                     <div className="task-grid">
                         {(!tasks || tasks.length === 0) ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có nhiệm vụ nào" /> : (
-                            tasks.slice(0, 6).map(task => (
+                            tasks.map(task => (
                                 <Card key={task.id} className={`task-card ${task.status?.toLowerCase()}`} onClick={() => { setSelectedTask(task); setTaskDrawerVisible(true); }}>
                                     <div className="task-card-header">
                                         <Tag color={task.priority === 'High' ? 'red' : task.priority === 'Medium' ? 'orange' : 'blue'}>{task.priority}</Tag>
-                                        <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(task.dueDate).format('DD MMM')}</Text>
+                                        <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(task.deadline).format('DD MMM')}</Text>
                                     </div>
                                     <Text strong className="task-title text-bright">{task.title}</Text>
                                     <p className="task-desc">{task.description}</p>
                                     <div className="task-card-footer">
                                         <Avatar size="small" src={`https://ui-avatars.com/api/?name=${task.assignedTo || 'U'}`} />
                                         <Space>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: task.status === 'Done' ? '#52c41a' : '#1890ff' }} />
-                                                <Text type="secondary" style={{ fontSize: 10 }}>{task.status}</Text>
-                                            </div>
+                                            <PaperClipOutlined style={{ fontSize: 12 }} />
+                                            <MessageOutlined style={{ fontSize: 12 }} />
                                         </Space>
                                     </div>
                                 </Card>
@@ -402,40 +368,23 @@ export default function GroupDashboardTab() {
                     </div>
                 </Col>
 
-                {/* 🔒 RIGHT: DIGITAL VAULT & PROGRESS */}
+                {/* 🔒 RIGHT: DIGITAL VAULT */}
                 <Col xs={24} lg={6}>
-                    <Card className="glass-panel" style={{ marginBottom: 20 }}>
-                        <Title level={5} className="text-bright">Tiến độ tổng thể</Title>
-                        <div style={{ textAlign: 'center', margin: '20px 0' }}>
-                            <Progress 
-                                type="dashboard" 
-                                percent={projectProgress} 
-                                strokeColor={{ '0%': '#10b981', '100%': '#3b82f6' }}
-                                trailColor="rgba(255,255,255,0.05)"
-                            />
-                        </div>
-                        <div className="milestones-row" style={{ marginTop: 0 }}>
-                            <div className={`milestone ${projectProgress >= 0 ? 'active' : ''}`}><span>Bắt đầu</span></div>
-                            <div className={`milestone ${projectProgress > 50 ? 'active' : ''}`}><span>Giữ kỳ</span></div>
-                            <div className={`milestone ${projectProgress === 100 ? 'active' : ''}`}><span>Về đích</span></div>
-                        </div>
-                    </Card>
-
                     <Card className="glass-panel vault-panel" title={<Space><SafetyCertificateOutlined /> Kho tài liệu mật</Space>}>
                         <div className="upload-zone-mini">
                             <Upload.Dragger customRequest={handleFileUpload} showUploadList={false} disabled={uploading}>
                                 {uploading ? <RocketOutlined spin style={{ color: '#1890ff' }} /> : <PlusOutlined />}
-                                <p style={{ fontSize: 12, margin: 0 }}>{uploading ? 'Đang mã hoá...' : 'Thả file bảo mật'}</p>
+                                <p style={{ fontSize: 12, margin: 0 }}>{uploading ? 'Đang mã hóa...' : 'Thả file bảo mật'}</p>
                             </Upload.Dragger>
                         </div>
                         
                         <div className="vault-list" style={{ marginTop: 20 }}>
                             {(!projectFiles || projectFiles.length === 0) ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} /> : (
-                                projectFiles.slice(0, 5).map(file => (
+                                projectFiles.map(file => (
                                     <div className="vault-item" key={file.id}>
                                         <FileIcon type={file.contentType} />
                                         <div className="file-info">
-                                            <Text strong className="text-bright" style={{ fontSize: 11 }} ellipsis>{file.fileName}</Text>
+                                            <Text strong className="text-bright" style={{ fontSize: 12 }} ellipsis>{file.fileName}</Text>
                                             <Text type="secondary" style={{ fontSize: 9 }}>{formatSize(file.size)} • {dayjs(file.uploadedAt).fromNow()}</Text>
                                         </div>
                                         <DownloadOutlined className="icon-btn" onClick={(e) => { e.stopPropagation(); handleDownload(file.fileId); }} />
@@ -448,8 +397,19 @@ export default function GroupDashboardTab() {
             </Row>
 
             {/* 🛰️ TASK SIDE DRAWER */}
-            <Drawer
-                title={<Space><RocketOutlined /> Chi tiết nhiệm vụ</Space>}
+             <Drawer
+                title={
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', paddingRight: 20 }}>
+                        <Space><RocketOutlined /> Chi tiết nhiệm vụ</Space>
+                        <Button 
+                            type="text" 
+                            icon={<EditOutlined style={{ color: '#1890ff' }} />} 
+                            onClick={handleOpenEdit}
+                        >
+                            Sửa
+                        </Button>
+                    </div>
+                }
                 width={isMobile ? '100%' : 500}
                 onClose={() => setTaskDrawerVisible(false)}
                 open={taskDrawerVisible}
@@ -474,9 +434,30 @@ export default function GroupDashboardTab() {
                             value={commentText}
                             onChange={e => setCommentText(e.target.value)}
                         />
+                        <Divider />
+                        <Button 
+                            danger 
+                            block 
+                            icon={<DeleteOutlined />} 
+                            onClick={() => handleDeleteTask(selectedTask.id)}
+                            className="delete-task-btn"
+                            style={{ marginTop: 20 }}
+                        >
+                            Xóa nhiệm vụ này
+                        </Button>
                     </div>
                 )}
             </Drawer>
+
+            {/* 📊 ANALYTICS MODAL */}
+            <ProjectAnalyticsModal
+                visible={isAnalyticsVisible}
+                onClose={() => setIsAnalyticsVisible(false)}
+                groupName={group?.name || ''}
+                tasks={tasks}
+                members={members}
+                files={projectFiles}
+            />
 
             {/* MODALS */}
             <Modal title="Thêm thành viên" open={isMemberModalVisible} onCancel={() => setIsMemberModalVisible(false)} footer={null}>
@@ -492,11 +473,21 @@ export default function GroupDashboardTab() {
                 </Form>
             </Modal>
 
-            <Modal title="Tạo nhiệm vụ" open={isTaskModalVisible} onCancel={() => setIsTaskModalVisible(false)} footer={null}>
+             <Modal title={isEditing ? "Chỉnh sửa nhiệm vụ" : "Tạo nhiệm vụ"} open={isTaskModalVisible} onCancel={() => setIsTaskModalVisible(false)} footer={null}>
                 <Form form={taskForm} layout="vertical" onFinish={handleCreateTask} initialValues={{ priority: 'Medium' }}>
                     <Form.Item name="title" label="Tiêu đề" rules={[{ required: true }]}><Input /></Form.Item>
                     <Form.Item name="description" label="Mô tả"><Input.TextArea /></Form.Item>
                     <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item name="status" label="Trạng thái" initialValue="Todo">
+                                <Select>
+                                    <Select.Option value="Todo">Cần làm</Select.Option>
+                                    <Select.Option value="InProgress">Đang làm</Select.Option>
+                                    <Select.Option value="InReview">Xem xét</Select.Option>
+                                    <Select.Option value="Done">Hoàn thành</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
                         <Col span={12}>
                             <Form.Item name="priority" label="Ưu tiên">
                                 <Select>
@@ -506,14 +497,25 @@ export default function GroupDashboardTab() {
                                 </Select>
                             </Form.Item>
                         </Col>
-                        <Col span={12}><Form.Item name="dueDate" label="Hạn chót"><DatePicker style={{ width: '100%' }} /></Form.Item></Col>
+                    </Row>
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item name="startDate" label="Bắt đầu">
+                                <DatePicker style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="deadline" label="Hạn chót">
+                                <DatePicker style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
                     </Row>
                     <Form.Item name="assignedTo" label="Người thực hiện">
                         <Select placeholder="Chọn thành viên">
                             {members.map(m => <Select.Option key={m.id} value={m.fullName}>{m.fullName}</Select.Option>)}
                         </Select>
                     </Form.Item>
-                    <Button type="primary" block htmlType="submit">Khởi tạo</Button>
+                    <Button type="primary" block htmlType="submit">{isEditing ? "Cập nhật" : "Khởi tạo"}</Button>
                 </Form>
             </Modal>
         </div>

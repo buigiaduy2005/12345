@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { App, Select, Input, Button, DatePicker, Avatar, Space } from 'antd';
@@ -11,23 +12,54 @@ interface Member {
     avatarUrl?: string;
 }
 
+interface Task {
+    id: string;
+    title: string;
+    description?: string;
+    status: string;
+    priority: string;
+    progress?: number;
+    assignedTo?: string;
+    startDate?: string;
+    deadline?: string;
+}
+
 interface CreateTaskModalProps {
     onClose: () => void;
     onSubmit: () => void;
+    task?: Task; // Optional task for editing
+    initialStatus?: string; // Optional initial status for new tasks
 }
 
-export default function CreateTaskModal({ onClose, onSubmit }: CreateTaskModalProps) {
+export default function CreateTaskModal({ onClose, onSubmit, task, initialStatus }: CreateTaskModalProps) {
+    const isEdit = !!task;
     const { id: groupId } = useParams<{ id: string }>();
     const { t } = useTranslation();
     const { message } = App.useApp();
     const [title, setTitle] = useState('');
-    const [status, setStatus] = useState('Todo');
+    const [status, setStatus] = useState(initialStatus || 'Todo');
+    const [startDate, setStartDate] = useState<any>(null);
     const [dueDate, setDueDate] = useState<any>(null);
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState('Normal');
-    const [assigneeId, setAssigneeId] = useState<string | null>(null);
+    const [assigneeId, setAssigneeId] = useState<string | null>(task?.assignedTo || null);
     const [members, setMembers] = useState<Member[]>([]);
     const [loading, setLoading] = useState(false);
+    const [progress, setProgress] = useState<number>(task?.progress || 0);
+
+    useEffect(() => {
+        if (task) {
+            setTitle(task.title);
+            setDescription(task.description || '');
+            setStatus(task.status);
+            setPriority(task.priority);
+            setStartDate(task.startDate ? dayjs(task.startDate) : null);
+            setDueDate(task.deadline ? dayjs(task.deadline) : null);
+            setAssigneeId(task.assignedTo || null);
+        } else if (initialStatus) {
+            setStatus(initialStatus);
+        }
+    }, [task, initialStatus]);
 
     useEffect(() => {
         const fetchMembers = async () => {
@@ -49,19 +81,30 @@ export default function CreateTaskModal({ onClose, onSubmit }: CreateTaskModalPr
 
         setLoading(true);
         try {
-            await api.post(`/api/groups/${groupId}/tasks`, {
-                title,
-                description,
+            const taskData = {
+                title: title.trim(),
+                description: description.trim(),
                 status,
                 priority,
-                deadline: dueDate?.toISOString(),
+                progress,
+                startDate: startDate ? startDate.toISOString() : null,
+                deadline: dueDate ? dueDate.toISOString() : null,
                 assignedTo: assigneeId
-            });
-            message.success('Tạo task thành công');
+            };
+
+            if (isEdit) {
+                await api.patch(`/api/groups/${groupId}/tasks/${task!.id}`, taskData);
+                message.success('Cập nhật task thành công');
+            } else {
+                await api.post(`/api/groups/${groupId}/tasks`, taskData);
+                message.success('Tạo task thành công');
+            }
             onSubmit();
             onClose();
-        } catch (err) {
-            message.error('Không thể tạo task');
+        } catch (err: any) {
+            console.error('Task creation failed:', err.response?.data || err);
+            const errorMsg = err.response?.data?.message || 'Không thể tạo task. Vui lòng kiểm tra lại dữ liệu.';
+            message.error(errorMsg);
         } finally {
             setLoading(false);
         }
@@ -71,7 +114,7 @@ export default function CreateTaskModal({ onClose, onSubmit }: CreateTaskModalPr
         <div className="taskModal-overlay" onClick={onClose}>
             <div className="taskModal-content" onClick={e => e.stopPropagation()}>
                 <div className="taskModal-header">
-                    <h2>Tạo Task Mới</h2>
+                    <h2>{isEdit ? 'Chỉnh Sửa Task' : 'Tạo Task Mới'}</h2>
                     <button className="iconBtn" onClick={onClose}>
                         <span className="material-symbols-outlined">close</span>
                     </button>
@@ -102,14 +145,41 @@ export default function CreateTaskModal({ onClose, onSubmit }: CreateTaskModalPr
                         </Select>
                     </div>
 
-                    <div className="taskForm-row">
-                        <label><span className="material-symbols-outlined">calendar_today</span> Hạn chót</label>
-                        <DatePicker 
-                            style={{ width: '100%' }} 
-                            onChange={setDueDate} 
-                            format="DD/MM/YYYY"
-                        />
+                    <div className="taskForm-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        <div>
+                            <label><span className="material-symbols-outlined">start</span> Bắt đầu</label>
+                            <DatePicker 
+                                style={{ width: '100%' }} 
+                                onChange={setStartDate} 
+                                value={startDate}
+                                format="DD/MM/YYYY"
+                                placeholder="Chọn ngày"
+                            />
+                        </div>
+                        <div>
+                            <label><span className="material-symbols-outlined">event</span> Kết thúc</label>
+                            <DatePicker 
+                                style={{ width: '100%' }} 
+                                onChange={setDueDate} 
+                                value={dueDate}
+                                format="DD/MM/YYYY"
+                                placeholder="Chọn ngày"
+                            />
+                        </div>
                     </div>
+
+                    {isEdit && (
+                        <div className="taskForm-row">
+                            <label><span className="material-symbols-outlined">analytics</span> Tiến độ (%)</label>
+                            <Input 
+                                type="number" 
+                                min={0} 
+                                max={100} 
+                                value={progress} 
+                                onChange={e => setProgress(Number(e.target.value))} 
+                            />
+                        </div>
+                    )}
 
                     <div className="taskForm-row">
                         <label><span className="material-symbols-outlined">person</span> Người thực hiện</label>
@@ -153,7 +223,9 @@ export default function CreateTaskModal({ onClose, onSubmit }: CreateTaskModalPr
                 <div className="taskModal-footer">
                     <div className="footer-actions">
                         <Button onClick={onClose}>Hủy bỏ</Button>
-                        <Button type="primary" loading={loading} onClick={handleSave}>Lưu Task</Button>
+                        <Button type="primary" loading={loading} onClick={handleSave}>
+                            {isEdit ? 'Cập nhật Task' : 'Lưu Task'}
+                        </Button>
                     </div>
                 </div>
             </div>

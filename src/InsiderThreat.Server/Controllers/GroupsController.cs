@@ -137,43 +137,41 @@ namespace InsiderThreat.Server.Controllers
         }
 
         [HttpPost("{id}/tasks")]
-        public async Task<IActionResult> CreateTask(string id, [FromBody] ProjectTask task)
+        public async Task<IActionResult> CreateTask(string id, [FromBody] CreateTaskRequest taskReq)
         {
-            task.GroupId = id;
-            task.CreatedAt = DateTime.UtcNow;
-            await _tasks.InsertOneAsync(task);
-            return Ok(task);
+            try
+            {
+                var task = new ProjectTask
+                {
+                    GroupId = id,
+                    Title = taskReq.Title ?? "Untitled Task",
+                    Description = taskReq.Description ?? "",
+                    Status = taskReq.Status ?? "Todo",
+                    Priority = taskReq.Priority ?? "Normal",
+                    AssignedTo = taskReq.AssignedTo,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                // Parse dates if provided
+                if (taskReq.StartDate.HasValue)
+                {
+                    task.StartDate = taskReq.StartDate.Value;
+                }
+                
+                if (taskReq.Deadline.HasValue)
+                {
+                    task.Deadline = taskReq.Deadline.Value;
+                }
+
+                await _tasks.InsertOneAsync(task);
+                return Ok(task);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating task for group {GroupId}", id);
+                return StatusCode(500, new { message = "Lỗi hệ thống khi tạo nhiệm vụ", error = ex.Message });
+            }
         }
-
-        // ─── FILE MANAGEMENT ──────────────────────────
-
-        [HttpGet("{id}/files")]
-        public async Task<IActionResult> GetFiles(string id)
-        {
-            var filesCollection = _database.GetCollection<ProjectFileRecord>("ProjectFiles");
-            var files = await filesCollection.Find(f => f.GroupId == id).SortByDescending(f => f.UploadedAt).ToListAsync();
-            return Ok(files);
-        }
-
-        [HttpPost("{id}/files")]
-        public async Task<IActionResult> AddFile(string id, [FromBody] ProjectFileRecord file)
-        {
-            file.GroupId = id;
-            file.UploadedAt = DateTime.UtcNow;
-            var filesCollection = _database.GetCollection<ProjectFileRecord>("ProjectFiles");
-            await filesCollection.InsertOneAsync(file);
-            return Ok(file);
-        }
-
-        [HttpPost("{id}/members")]
-        public async Task<IActionResult> AddMember(string id, [FromBody] AddMemberRequest request)
-        {
-            var update = Builders<Group>.Update.AddToSet(g => g.MemberIds, request.UserId);
-            await _groups.UpdateOneAsync(g => g.Id == id, update);
-            return Ok(new { message = "Added" });
-        }
-
-        // ─── TASK ACTIONS AREA ──────────────────────────
 
         [HttpPatch("{id}/tasks/{taskId}")]
         public async Task<IActionResult> UpdateTask(string id, string taskId, [FromBody] ProjectTask taskUpdate)
@@ -192,7 +190,6 @@ namespace InsiderThreat.Server.Controllers
                     .Set(t => t.Priority, taskUpdate.Priority)
                     .Set(t => t.AssignedTo, taskUpdate.AssignedTo)
                     .Set(t => t.Progress, taskUpdate.Progress)
-                    .Set(t => t.Phase, taskUpdate.Phase)
                     .Set(t => t.StartDate, taskUpdate.StartDate)
                     .Set(t => t.Deadline, taskUpdate.Deadline);
 
@@ -232,9 +229,48 @@ namespace InsiderThreat.Server.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        // ─── FILE MANAGEMENT ──────────────────────────
+
+        [HttpGet("{id}/files")]
+        public async Task<IActionResult> GetFiles(string id)
+        {
+            var filesCollection = _database.GetCollection<ProjectFileRecord>("ProjectFiles");
+            var files = await filesCollection.Find(f => f.GroupId == id).SortByDescending(f => f.UploadedAt).ToListAsync();
+            return Ok(files);
+        }
+
+        [HttpPost("{id}/files")]
+        public async Task<IActionResult> AddFile(string id, [FromBody] ProjectFileRecord file)
+        {
+            file.GroupId = id;
+            file.UploadedAt = DateTime.UtcNow;
+            var filesCollection = _database.GetCollection<ProjectFileRecord>("ProjectFiles");
+            await filesCollection.InsertOneAsync(file);
+            return Ok(file);
+        }
+
+        [HttpPost("{id}/members")]
+        public async Task<IActionResult> AddMember(string id, [FromBody] AddMemberRequest request)
+        {
+            var update = Builders<Group>.Update.AddToSet(g => g.MemberIds, request.UserId);
+            await _groups.UpdateOneAsync(g => g.Id == id, update);
+            return Ok(new { message = "Added" });
+        }
     }
 
     // ─── DTOs ────────────────────────────────────────────────────────────────
+
+    public class CreateTaskRequest
+    {
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public string? AssignedTo { get; set; }
+        public string? Status { get; set; }
+        public string? Priority { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? Deadline { get; set; }
+    }
 
     public class CreateGroupRequest
     {

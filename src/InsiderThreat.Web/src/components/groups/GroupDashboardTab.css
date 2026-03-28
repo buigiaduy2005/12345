@@ -196,3 +196,8 @@
     border: 2px solid var(--color-border);
     box-shadow: 0 0 8px var(--color-primary-light);
 }
+
+.custom-member-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.member-item-new { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; transition: background 0.2s; }
+.member-item-new:hover { background: rgba(255, 255, 255, 0.05); }
+.member-info-new { flex: 1; display: flex; flex-direction: column; gap: 2px; }

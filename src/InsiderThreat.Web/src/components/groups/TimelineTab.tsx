@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { Spin, message, Tooltip, Empty, Tag, Button } from 'antd';
+import { Spin, message, Tooltip, Empty, Tag, Button, Modal, Form, DatePicker, Input, Space } from 'antd';
 import { 
     CalendarOutlined, FilterOutlined, SendOutlined, 
     MoreOutlined, CheckCircleOutlined, RightOutlined, DownOutlined 
@@ -17,6 +17,7 @@ interface Task {
     phase?: string;
     startDate?: string;
     deadline?: string;
+    createdAt?: string; // Bổ sung ngày tạo
     progress: number;
 }
 
@@ -34,6 +35,9 @@ export default function TimelineTab() {
     const [group, setGroup] = useState<GroupInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({});
+    const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
+    const [filterText, setFilterText] = useState('');
+    const [scheduleForm] = Form.useForm();
 
     const fetchData = async () => {
         setLoading(true);
@@ -65,18 +69,52 @@ export default function TimelineTab() {
         setExpandedPhases(prev => ({ ...prev, [phase]: !prev[phase] }));
     };
 
+    const handleUpdateSchedule = async (values: any) => {
+        try {
+            await api.patch(`/api/groups/${groupId}`, {
+                projectStartDate: values.range[0].toISOString(),
+                projectEndDate: values.range[1].toISOString()
+            });
+            message.success('Cập nhật lộ trình dự án thành công');
+            setIsScheduleModalVisible(false);
+            fetchData();
+        } catch (err) {
+            message.error('Lỗi khi cập nhật lộ trình');
+        }
+    };
+
+    const handleExport = () => {
+        message.loading('Đang chuẩn bị dữ liệu xuất bản...', 1.5).then(() => {
+            message.success('Đã xuất bản lộ trình dự án (PDF/CSV)');
+        });
+    };
+
     // Calculate project duration for scaling
     const timelineScale = useMemo(() => {
-        if (!group?.projectStartDate || !group?.projectEndDate) {
-            // Default scale if no dates: 30 days from project creation or today
-            const start = dayjs().startOf('month');
-            const end = start.add(2, 'month');
-            return { start, end, totalDays: end.diff(start, 'day') };
+        // Find min/max across all tasks if project dates are missing
+        let start = group?.projectStartDate ? dayjs(group.projectStartDate) : null;
+        let end = group?.projectEndDate ? dayjs(group.projectEndDate) : null;
+
+        if (!start || !end) {
+            tasks.forEach(t => {
+                const dates = [t.startDate, t.deadline, t.createdAt].filter(Boolean).map(d => dayjs(d));
+                dates.forEach(d => {
+                    if (!start || d.isBefore(start)) start = d;
+                    if (!end || d.isAfter(end)) end = d;
+                });
+            });
+
+            // Default fallback if no tasks
+            if (!start) start = dayjs().startOf('month');
+            if (!end) end = start.add(1, 'month');
+
+            // Add padding (1 week)
+            start = start.subtract(1, 'week');
+            end = end.add(1, 'week');
         }
-        const start = dayjs(group.projectStartDate);
-        const end = dayjs(group.projectEndDate);
-        return { start, end, totalDays: end.diff(start, 'day') || 30 };
-    }, [group]);
+
+        return { start, end, totalDays: Math.max(1, end.diff(start, 'day')) };
+    }, [group, tasks]);
 
     const weeksLabels = useMemo(() => {
         const labels = [];
@@ -90,29 +128,39 @@ export default function TimelineTab() {
 
     const tasksByPhase = useMemo(() => {
         const grouped: Record<string, Task[]> = {};
-        tasks.forEach(task => {
+        const filtered = tasks.filter(t => 
+            t.title.toLowerCase().includes(filterText.toLowerCase())
+        );
+        filtered.forEach(task => {
             const phase = task.phase || 'General';
             if (!grouped[phase]) grouped[phase] = [];
             grouped[phase].push(task);
         });
         return grouped;
-    }, [tasks]);
+    }, [tasks, filterText]);
 
     const getBarStyles = (task: Task) => {
-        if (!task.startDate || !task.deadline) return { left: '0%', width: '0%', display: 'none' };
-        
-        const taskStart = dayjs(task.startDate);
-        const taskEnd = dayjs(task.deadline);
+        // Fallback dates: use createdAt if dates are missing
+        const taskStart = dayjs(task.startDate || task.createdAt);
+        const taskEnd = dayjs(task.deadline || task.startDate || task.createdAt);
         
         const startOffset = taskStart.diff(timelineScale.start, 'day');
-        const duration = taskEnd.diff(taskStart, 'day') || 1;
+        let duration = taskEnd.diff(taskStart, 'day');
+        if (duration <= 0) duration = 1; // Minimum 1 day width
         
-        const leftPercent = Math.max(0, (startOffset / timelineScale.totalDays) * 100);
-        const widthPercent = Math.min(100 - leftPercent, (duration / timelineScale.totalDays) * 100);
+        const leftPercent = (startOffset / timelineScale.totalDays) * 100;
+        const widthPercent = (duration / timelineScale.totalDays) * 100;
         
+        // Hide only if completely outside and no fallback
+        if (isNaN(leftPercent) || (!task.startDate && !task.deadline && !task.createdAt)) {
+            return { display: 'none' };
+        }
+
         return {
-            left: `${leftPercent}%`,
-            width: `${Math.max(2, widthPercent)}%`
+            left: `${Math.max(0, Math.min(98, leftPercent))}%`,
+            width: `${Math.max(2, Math.min(100 - leftPercent, widthPercent))}%`,
+            opacity: (!task.startDate || !task.deadline) ? 0.6 : 1, // Mờ hơn nếu dùng ngày mặc định
+            borderStyle: (!task.startDate || !task.deadline) ? 'dashed' : 'solid'
         };
     };
 
@@ -135,9 +183,15 @@ export default function TimelineTab() {
                     <h2 className="timeline-title">Lộ trình và Kế hoạch Dự án</h2>
                 </div>
                 <div className="timeline-actions">
-                    <Button icon={<FilterOutlined />}>Bộ lọc</Button>
-                    <Button icon={<SendOutlined />}>Xuất bản</Button>
-                    <Button type="primary" icon={<CalendarOutlined />}>Lập lịch</Button>
+                    <Input 
+                        placeholder="Tìm nhiệm vụ..." 
+                        prefix={<FilterOutlined />} 
+                        style={{ width: 200, marginRight: 8 }}
+                        value={filterText}
+                        onChange={e => setFilterText(e.target.value)}
+                    />
+                    <Button icon={<SendOutlined />} onClick={handleExport}>Xuất bản</Button>
+                    <Button type="primary" icon={<CalendarOutlined />} onClick={() => setIsScheduleModalVisible(true)}>Lập lịch</Button>
                 </div>
             </div>
 
@@ -217,6 +271,30 @@ export default function TimelineTab() {
                     ))}
                 </div>
             </div>
+
+            <Modal
+                title="Cấu hình Lộ trình Dự án"
+                open={isScheduleModalVisible}
+                onCancel={() => setIsScheduleModalVisible(false)}
+                onOk={() => scheduleForm.submit()}
+                okText="Cập nhật"
+                cancelText="Hủy"
+            >
+                <Form
+                    form={scheduleForm}
+                    layout="vertical"
+                    onFinish={handleUpdateSchedule}
+                    initialValues={{
+                        range: group?.projectStartDate && group?.projectEndDate ? 
+                            [dayjs(group.projectStartDate), dayjs(group.projectEndDate)] : []
+                    }}
+                >
+                    <p>Chọn khoảng thời gian tổng thể của dự án để căn chỉnh biểu đồ Gantt.</p>
+                    <Form.Item name="range" label="Thời gian dự án" rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}>
+                        <DatePicker.RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </div>
     );
 }

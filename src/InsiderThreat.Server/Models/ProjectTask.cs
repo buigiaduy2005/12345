@@ -12,8 +12,7 @@ namespace InsiderThreat.Server.Models
         public string? Id { get; set; }
 
         [BsonElement("groupId")]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string GroupId { get; set; } = null!;
+        public string? GroupId { get; set; }
 
         [BsonElement("title")]
         public string Title { get; set; } = string.Empty;

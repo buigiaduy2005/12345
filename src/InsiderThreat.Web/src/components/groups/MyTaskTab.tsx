@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { message, Spin, Empty, Avatar, Tooltip, Tag, Button, Input, Dropdown, Space } from 'antd';
+import { message, Spin, Empty, Avatar, Tooltip, Tag, Button, Input, Dropdown, Space, Modal } from 'antd';
 import { 
     SearchOutlined, AppstoreOutlined, UnorderedListOutlined, 
     PlusOutlined, MoreOutlined, ClockCircleOutlined, 
-    CheckCircleOutlined, SwapOutlined 
+    CheckCircleOutlined, SwapOutlined, DeleteOutlined, EditOutlined
 } from '@ant-design/icons';
 import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -21,6 +21,7 @@ interface Task {
     priority: string;
     progress: number;
     assignedTo?: string;
+    startDate?: string;
     deadline?: string;
 }
 
@@ -52,6 +53,8 @@ export default function MyTaskTab() {
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
     const [showCreateTask, setShowCreateTask] = useState(false);
+    const [taskToEdit, setTaskToEdit] = useState<Task | undefined>(undefined);
+    const [initialStatus, setInitialStatus] = useState<string | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState('');
 
     const fetchData = async () => {
@@ -102,6 +105,25 @@ export default function MyTaskTab() {
         return members.find(m => m.id === userId);
     };
 
+    const handleDeleteTask = (taskId: string) => {
+        Modal.confirm({
+            title: 'Xóa nhiệm vụ?',
+            content: 'Hành động này không thể hoàn tác.',
+            okText: 'Xóa',
+            okType: 'danger',
+            cancelText: 'Hủy',
+            onOk: async () => {
+                try {
+                    await api.delete(`/api/groups/${groupId}/tasks/${taskId}`);
+                    message.success('Đã xóa task');
+                    fetchData();
+                } catch (err) {
+                    message.error('Lỗi khi xóa task');
+                }
+            }
+        });
+    };
+
     const filteredTasks = useMemo(() => {
         return tasks.filter(t => 
             !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -144,7 +166,15 @@ export default function MyTaskTab() {
                         </Button>
                     </div>
 
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowCreateTask(true)}>
+                    <Button 
+                        type="primary" 
+                        icon={<PlusOutlined />} 
+                        onClick={() => { 
+                            setTaskToEdit(undefined); 
+                            setInitialStatus(undefined);
+                            setShowCreateTask(true); 
+                        }}
+                    >
                         Thêm Task
                     </Button>
                 </div>
@@ -170,7 +200,16 @@ export default function MyTaskTab() {
                                                     {filteredTasks.filter(t => t.status === col.id).length}
                                                 </span>
                                             </div>
-                                            <Button type="text" size="small" icon={<PlusOutlined />} onClick={() => setShowCreateTask(true)} />
+                                            <Button 
+                                                type="text" 
+                                                size="small" 
+                                                icon={<PlusOutlined />} 
+                                                onClick={() => {
+                                                    setTaskToEdit(undefined);
+                                                    setInitialStatus(col.id);
+                                                    setShowCreateTask(true);
+                                                }} 
+                                            />
                                         </div>
 
                                         <div className="kanbanCardsList">
@@ -185,15 +224,37 @@ export default function MyTaskTab() {
                                                                 {...provided.dragHandleProps}
                                                                 className={`modern-kCard ${snapshot.isDragging ? 'is-dragging' : ''}`}
                                                             >
-                                                                <div className="kCard-tagRow">
-                                                                    <Tag color={task.priority === 'High' ? 'red' : task.priority === 'Medium' ? 'orange' : 'blue'}>
-                                                                        {task.priority}
-                                                                    </Tag>
-                                                                    {task.deadline && (
-                                                                        <span className="kCard-date">
-                                                                            <ClockCircleOutlined /> {new Date(task.deadline).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
-                                                                        </span>
-                                                                    )}
+                                                                 <div className="kCard-tagRow">
+                                                                    <Space>
+                                                                        <Tag color={task.priority === 'High' ? 'red' : task.priority === 'Medium' ? 'orange' : 'blue'}>
+                                                                            {task.priority}
+                                                                        </Tag>
+                                                                        {task.deadline && (
+                                                                            <span className="kCard-date">
+                                                                                <ClockCircleOutlined /> {new Date(task.deadline).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                                                                            </span>
+                                                                        )}
+                                                                    </Space>
+                                                                    <Space>
+                                                                        <Button 
+                                                                            type="text" 
+                                                                            size="small" 
+                                                                            icon={<EditOutlined style={{ fontSize: 12, color: '#1890ff' }} />} 
+                                                                            onClick={(e) => { 
+                                                                                e.stopPropagation(); 
+                                                                                setTaskToEdit(task); 
+                                                                                setShowCreateTask(true); 
+                                                                            }}
+                                                                        />
+                                                                        <Button 
+                                                                            type="text" 
+                                                                            size="small" 
+                                                                            danger 
+                                                                            icon={<DeleteOutlined style={{ fontSize: 12 }} />} 
+                                                                            onClick={(e) => { e.stopPropagation(); handleDeleteTask(task.id); }}
+                                                                            className="kCard-delete-btn"
+                                                                        />
+                                                                    </Space>
                                                                 </div>
                                                                 <h4 className="kCard-title">{task.title}</h4>
                                                                 {task.description && <p className="kCard-description">{task.description}</p>}
@@ -237,6 +298,7 @@ export default function MyTaskTab() {
                         <div className="list-col">Người làm</div>
                         <div className="list-col">Hạn chót</div>
                         <div className="list-col">Độ ưu tiên</div>
+                        <div className="list-col" style={{ width: 80 }}>Thao tác</div>
                     </div>
                     {filteredTasks.map(t => (
                         <div key={t.id} className="list-row">
@@ -254,17 +316,43 @@ export default function MyTaskTab() {
                             <div className="list-col">
                                 <Tag color={t.priority === 'High' ? 'red' : 'default'}>{t.priority}</Tag>
                             </div>
+                            <div className="list-col">
+                                <Space>
+                                    <Button 
+                                        type="text" 
+                                        icon={<EditOutlined style={{ color: '#1890ff' }} />} 
+                                        onClick={() => { 
+                                            setTaskToEdit(t); 
+                                            setShowCreateTask(true); 
+                                        }} 
+                                    />
+                                    <Button 
+                                        type="text" 
+                                        danger 
+                                        icon={<DeleteOutlined />} 
+                                        onClick={() => handleDeleteTask(t.id)} 
+                                    />
+                                </Space>
+                            </div>
                         </div>
                     ))}
                     {filteredTasks.length === 0 && <Empty description="Không tìm thấy công việc" />}
                 </div>
             )}
 
-            {showCreateTask && (
+             {showCreateTask && (
                 <CreateTaskModal
-                    onClose={() => setShowCreateTask(false)}
+                    task={taskToEdit}
+                    initialStatus={initialStatus}
+                    onClose={() => {
+                        setShowCreateTask(false);
+                        setTaskToEdit(undefined);
+                        setInitialStatus(undefined);
+                    }}
                     onSubmit={() => {
                         setShowCreateTask(false);
+                        setTaskToEdit(undefined);
+                        setInitialStatus(undefined);
                         fetchData();
                     }}
                 />
