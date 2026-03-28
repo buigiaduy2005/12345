@@ -58,7 +58,14 @@ const MonitorLogsPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [allLogs, setAllLogs] = useState<MonitorLog[]>([]);
     const [summary, setSummary] = useState<MonitorSummary | null>(null);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Two-level navigation state
     const [selectedMachine, setSelectedMachine] = useState<MachineInfo | null>(null);
@@ -252,6 +259,26 @@ const MonitorLogsPage: React.FC = () => {
         if (machine.totalAlerts > 0) return { color: '#1890ff', text: 'Bình thường', status: 'processing' as const };
         return { color: '#52c41a', text: 'An toàn', status: 'success' as const };
     };
+
+    // ─── Mobile View Component ──────────────────────
+    const renderMobileLogItem = (log: MonitorLog) => (
+        <Card size="small" key={log.id || Math.random()} style={{ marginBottom: 12, borderRadius: 12, borderLeft: `4px solid ${getSeverityColor(log.severityScore)}`, boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Tag color={getSeverityColor(log.severityScore)} style={{ fontWeight: 'bold' }}>{log.severityScore}/10</Tag>
+                <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(log.timestamp).format('HH:mm:ss DD/MM')}</Text>
+            </div>
+            <div style={{ marginBottom: 6 }}>
+                <Tag color="blue" size="small">{log.logType}</Tag>
+            </div>
+            <div style={{ fontSize: 13, color: '#262626', marginBottom: 8, lineHeight: '1.5' }}>
+                {log.detectedKeyword && <Text type="danger" strong>[{log.detectedKeyword}] </Text>}
+                {log.messageContext || log.message}
+            </div>
+            <div style={{ fontSize: 11, color: '#8c8c8c', fontStyle: 'italic' }}>
+                {log.applicationName} {log.windowTitle ? ` - ${log.windowTitle}` : ''}
+            </div>
+        </Card>
+    );
 
     const handleMachineClick = (machine: MachineInfo) => {
         setSelectedMachine(machine);
@@ -553,447 +580,134 @@ const MonitorLogsPage: React.FC = () => {
 
     // ─── RENDER ──────────────────────────
     return (
-        <div style={{ padding: '24px' }}>
-            {/* Header */}
-            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: isMobile ? '12px' : '24px', paddingBottom: '80px' }}>
+            {/* 📱 Header & Navigation */}
+            <div style={{ 
+                marginBottom: isMobile ? '16px' : '24px', 
+                display: 'flex', 
+                flexDirection: isMobile ? 'column' : 'row', 
+                justifyContent: 'space-between', 
+                alignItems: isMobile ? 'flex-start' : 'center',
+                gap: 12 
+            }}>
                 <div>
                     {selectedMachine ? (
                         <Breadcrumb items={[
-                            { title: <span onClick={handleBack} style={{ cursor: 'pointer', color: '#1890ff' }}><HomeOutlined /> Tất cả máy tính</span> },
-                            { title: <span><DesktopOutlined /> {selectedMachine.computerName} ({selectedMachine.computerUser})</span> },
+                            { title: <span onClick={handleBack} style={{ cursor: 'pointer', color: '#1890ff' }}><HomeOutlined /> {!isMobile && 'Tất cả máy tính'}</span> },
+                            { title: <span><DesktopOutlined /> {selectedMachine.computerName}</span> },
                         ]} />
                     ) : null}
-                    <Title level={2} style={{ margin: selectedMachine ? '8px 0 0' : 0 }}>
+                    <Title level={isMobile ? 4 : 2} style={{ margin: selectedMachine ? '4px 0 0' : 0 }}>
                         <SecurityScanOutlined /> {selectedMachine 
-                            ? `Chi tiết giám sát - ${selectedMachine.computerName}`
-                            : t('monitor.title', 'Giám sát Agent Máy tính Cá nhân')
+                            ? (isMobile ? 'Chi tiết' : `Chi tiết giám sát - ${selectedMachine.computerName}`)
+                            : (isMobile ? 'Giám sát Agent' : t('monitor.title', 'Giám sát Agent Máy tính Cá nhân'))
                         }
                     </Title>
                 </div>
-                <Space>
+                <Space wrap={isMobile} style={{ width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
                     <Button 
                         icon={<ArrowLeftOutlined />} 
                         onClick={selectedMachine ? handleBack : () => navigate(-1)}
+                        size={isMobile ? 'middle' : 'middle'}
                     >
-                        {selectedMachine ? 'Quay lại' : 'Trở lại'}
+                        {!isMobile && (selectedMachine ? 'Quay lại' : 'Trở lại')}
                     </Button>
-                    {!isArchiveMode && (
+                    
+                    {!isMobile && !isArchiveMode && (
                         <>
                             <Button
                                 icon={<FileSearchOutlined />}
                                 onClick={() => setUploadModalVisible(true)}
                                 style={{ borderColor: '#faad14', color: '#faad14' }}
                             >
-                                Xem Log từ ZIP (Offline)
+                                Mở ZIP
                             </Button>
                             <Button
                                 icon={<FileZipOutlined />}
                                 onClick={handleArchiveLogs}
                                 style={{ borderColor: '#722ed1', color: '#722ed1' }}
                             >
-                                Nén & Lưu trữ Log (ZIP)
+                                Nén Log
                             </Button>
                         </>
                     )}
-                    {isArchiveMode && (
-                        <Button
-                            type="primary"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => {
-                                setIsArchiveMode(false);
-                                setArchiveLogs([]);
-                                setArchiveFileName('');
-                            }}
-                        >
-                            Đóng Chế độ xem Lưu trữ
-                        </Button>
-                    )}
+
                     <Button
                         type="primary" 
-                        icon={<SecurityScanOutlined />} 
-                        style={{ backgroundColor: '#722ed1' }}
-                        onClick={() => message.info('Tính năng điều khiển Agent đang được phát triển...')}
+                        icon={<ReloadOutlined />} 
+                        onClick={selectedMachine ? () => loadDetailLogs(selectedMachine.computerName, selectedMachine.computerUser) : loadOverview} 
+                        loading={loading}
                     >
-                        Agent kiểm soát tại máy tính cá nhân
+                        {!isMobile && t('common.refresh', 'Làm mới')}
                     </Button>
-                    {!isArchiveMode && (
-                        <Button icon={<ReloadOutlined />} onClick={selectedMachine ? () => loadDetailLogs(selectedMachine.computerName, selectedMachine.computerUser) : loadOverview} loading={loading}>
-                            {t('common.refresh', 'Làm mới')}
-                        </Button>
-                    )}
                 </Space>
             </div>
 
-            {/* Archive Notification Bar */}
-            {isArchiveMode && (
-                <Card size="small" style={{ marginBottom: 24, background: '#fff7e6', border: '1px solid #faad14' }}>
-                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                        <Space>
-                            <FileZipOutlined style={{ fontSize: 24, color: '#faad14' }} />
-                            <div>
-                                <Title level={4} style={{ margin: 0 }}>Chế độ Xem Lưu trữ (Offline View)</Title>
-                                <Text type="secondary">Đang hiển thị dữ liệu từ tệp: <Text strong color="orange">{archiveFileName}</Text> ({archiveLogs.length} bản ghi)</Text>
-                            </div>
-                        </Space>
-                        <Button icon={<ExportOutlined />} onClick={() => setIsArchiveMode(false)}>Quay lại Dữ liệu Trực tiếp</Button>
-                    </Space>
-                </Card>
-            )}
-
-            {/* Summary Stats (Hide in archive mode to avoid confusion) */}
-            {!isArchiveMode && (
-                <Row gutter={16} style={{ marginBottom: '24px' }}>
-                <Col span={6}>
-                    <Card variant="borderless" style={{ background: '#f0f5ff' }}>
+            {/* 📊 Summary Stats */}
+            <Row gutter={[12, 12]} style={{ marginBottom: isMobile ? '16px' : '24px' }}>
+                <Col span={isMobile ? 12 : 6}>
+                    <Card size="small" variant="borderless" style={{ background: '#f0f5ff', borderRadius: 12 }}>
                         <Statistic
-                            title={t('monitor.total_today', 'Tổng cảnh báo hôm nay')}
+                            title="Tổng hôm nay"
                             value={summary?.totalToday || 0}
-                            styles={{ content: { color: '#1d39c4' } }}
+                            valueStyle={{ fontSize: isMobile ? 20 : 24, color: '#1d39c4', fontWeight: 'bold' }}
                             prefix={<SecurityScanOutlined />}
                         />
                     </Card>
                 </Col>
-                <Col span={6}>
-                    <Card variant="borderless" style={{ background: '#fff1f0' }}>
+                <Col span={isMobile ? 12 : 6}>
+                    <Card size="small" variant="borderless" style={{ background: '#fff1f0', borderRadius: 12 }}>
                         <Statistic
-                            title={t('monitor.critical_today', 'Nguy hiểm (>=7)')}
+                            title="Nguy hiểm"
                             value={summary?.criticalToday || 0}
-                            styles={{ content: { color: '#cf1322' } }}
+                            valueStyle={{ fontSize: isMobile ? 20 : 24, color: '#cf1322', fontWeight: 'bold' }}
                             prefix={<WarningOutlined />}
                         />
                     </Card>
                 </Col>
-                <Col span={6}>
-                    <Card variant="borderless" style={{ background: '#e6fffb' }}>
-                        <Statistic
-                            title={t('monitor.screenshots_today', 'Ảnh chụp màn hình')}
-                            value={summary?.screenshotsToday || 0}
-                            styles={{ content: { color: '#08979c' } }}
-                            prefix={<CameraOutlined />}
-                        />
-                    </Card>
-                </Col>
-                <Col span={6}>
-                    <Card variant="borderless" style={{ background: '#f9f0ff' }}>
-                        <Statistic
-                            title={t('monitor.keywords_today', 'Từ khóa nhạy cảm')}
-                            value={summary?.keywordsToday || 0}
-                            styles={{ content: { color: '#531dab' } }}
-                            prefix={<KeyOutlined />}
-                        />
-                    </Card>
-                </Col>
+                {!isMobile && (
+                    <>
+                        <Col span={6}>
+                            <Card variant="borderless" style={{ background: '#e6fffb', borderRadius: 12 }}>
+                                <Statistic title="Ảnh chụp" value={summary?.screenshotsToday || 0} valueStyle={{ color: '#08979c' }} prefix={<CameraOutlined />} />
+                            </Card>
+                        </Col>
+                        <Col span={6}>
+                            <Card variant="borderless" style={{ background: '#f9f0ff', borderRadius: 12 }}>
+                                <Statistic title="Từ khóa" value={summary?.keywordsToday || 0} valueStyle={{ color: '#531dab' }} prefix={<KeyOutlined />} />
+                            </Card>
+                        </Col>
+                    </>
+                )}
             </Row>
-            )}
 
-            {/* 📈 ANALYTICS DASHBOARD - THỐNG KÊ CHI TIẾT BẰNG BIỂU ĐỒ */}
+            {/* 📈 ANALYTICS DASHBOARD (Responsive) */}
             {!selectedMachine && !isArchiveMode && allLogs.length > 0 && (
-            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                {/* Xu hướng theo thời gian */}
-                <Col xs={24} lg={12}>
-                    <Card title={<Space><LineChartOutlined /> Xu hướng vi phạm trong ngày</Space>} bordered={false} style={{ borderRadius: 12, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                        <div style={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                                <AreaChart data={chartData.trend}>
-                                    <defs>
-                                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                    <XAxis dataKey="time" axisLine={false} tickLine={false} style={{ fontSize: '12px' }} />
-                                    <YAxis axisLine={false} tickLine={false} style={{ fontSize: '12px' }} />
-                                    <Tooltip 
-                                        contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                    />
-                                    <Area type="monotone" dataKey="count" stroke="#8884d8" fillOpacity={1} fill="url(#colorCount)" name="Số lượng" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </Card>
-                </Col>
-
-                {/* Tỉ lệ loại vi phạm */}
-                <Col xs={24} md={12} lg={6}>
-                    <Card title={<Space><PieChartOutlined /> Loại vi phạm</Space>} bordered={false} style={{ borderRadius: 12, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                        <div style={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                                <PieChart>
-                                    <Pie
-                                        data={chartData.types}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {chartData.types.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </Card>
-                </Col>
-
-                {/* Top máy rủi ro */}
-                <Col xs={24} md={12} lg={6}>
-                    <Card title={<Space><BarChartOutlined /> Top 5 Máy rủi ro</Space>} bordered={false} style={{ borderRadius: 12, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                        <div style={{ width: '100%', height: 300 }}>
-                            <ResponsiveContainer>
-                                <BarChart layout="vertical" data={chartData.topMachines}>
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
-                                    <XAxis type="number" hide />
-                                    <YAxis dataKey="name" type="category" width={80} axisLine={false} tickLine={false} style={{ fontSize: '11px' }} />
-                                    <Tooltip cursor={{fill: '#f5f5f5'}} />
-                                    <Bar dataKey="count" fill="#ff4d4f" radius={[0, 4, 4, 0]} barSize={20} name="Số cảnh báo" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </Card>
-                </Col>
-            </Row>
-            )}
-
-            {/* ═══════ ARCHIVE VIEW (CHẾ ĐỘ XEM NGOẠI TUYẾN) ═══════ */}
-            {isArchiveMode && (
-                <>
-                    {/* Quay lại danh sách máy trong Archive */}
-                    {selectedArchiveMachine && (
-                        <div style={{ marginBottom: 16 }}>
-                            <Button size="small" icon={<ArrowLeftOutlined />} onClick={() => setSelectedArchiveMachine(null)}>
-                                Quay lại danh sách máy trong file nén
-                            </Button>
-                        </div>
-                    )}
-
-                    {!selectedArchiveMachine ? (
-                        <Card title={`Danh sách máy tính tìm thấy trong tệp [${archiveFileName}]`}>
-                            <Row gutter={[16, 16]}>
-                                {archiveMachines.map(m => (
-                                    <Col xs={24} sm={12} lg={8} key={m.computerName + m.computerUser}>
-                                        <Card 
-                                            hoverable 
-                                            size="small" 
-                                            onClick={() => setSelectedArchiveMachine(m)}
-                                            style={{ borderLeft: '4px solid #faad14', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-                                        >
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <Space>
-                                                    <Avatar icon={<DesktopOutlined />} style={{ backgroundColor: '#faad14' }} />
-                                                    <div>
-                                                        <Text strong>{m.computerName}</Text>
-                                                        <br />
-                                                        <Text type="secondary" style={{ fontSize: 12 }}>{m.computerUser}</Text>
-                                                    </div>
-                                                </Space>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <Badge count={m.totalAlerts} overflowCount={999} color="#faad14" />
-                                                    <div style={{ fontSize: 10, color: '#8c8c8c' }}>logs</div>
-                                                </div>
-                                            </div>
-                                        </Card>
-                                    </Col>
-                                ))}
-                            </Row>
-                        </Card>
-                    ) : (
-                        <Card title={<Space><DesktopOutlined /> Nhật ký chi tiết: {selectedArchiveMachine.computerName} ({selectedArchiveMachine.computerUser})</Space>} bordered={false} style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                            <Table
-                                columns={columns}
-                                dataSource={filteredArchiveLogs}
-                                rowKey={(record) => `${record.timestamp}-${Math.random()}`}
-                                pagination={{ pageSize: 20 }}
-                                size="small"
-                            />
-                        </Card>
-                    )}
-                </>
-            )}
-
-            {/* ═══════ LEVEL 1: Machine List ═══════ */}
-            {!selectedMachine && !isArchiveMode && (
-                <>
-                    {/* Search bar */}
-                    <Card style={{ marginBottom: '16px' }} size="small">
-                        <Space size="large">
-                            <div>
-                                <Text type="secondary" style={{ marginRight: 8 }}>Tìm kiếm máy tính:</Text>
-                                <Input
-                                    placeholder="Nhập tên máy, tài khoản, IP..."
-                                    style={{ width: 300 }}
-                                    prefix={<SearchOutlined />}
-                                    value={machineSearch}
-                                    onChange={e => setMachineSearch(e.target.value)}
-                                    allowClear
-                                />
+                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                    <Col xs={24} lg={12}>
+                        <Card title={<Space><LineChartOutlined /> Xu hướng</Space>} size="small" bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                            <div style={{ width: '100%', height: isMobile ? 180 : 300 }}>
+                                <ResponsiveContainer>
+                                    <AreaChart data={chartData.trend}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                        <XAxis dataKey="time" hide={isMobile} />
+                                        <YAxis axisLine={false} tickLine={false} style={{ fontSize: '10px' }} />
+                                        <Tooltip />
+                                        <Area type="monotone" dataKey="count" stroke="#8884d8" fill="#f9f0ff" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
                             </div>
-                            <Text type="secondary">
-                                Tìm thấy <Text strong>{filteredMachines.length}</Text> máy tính đang được giám sát
-                            </Text>
-                        </Space>
-                    </Card>
-
-                    {/* Machine Cards */}
-                    <Row gutter={[16, 16]}>
-                        {filteredMachines.map((machine: MachineInfo) => {
-                            const risk = getRiskLevel(machine);
-                            return (
-                                <Col xs={24} sm={12} lg={8} xl={6} key={`${machine.computerName}-${machine.computerUser}`}>
-                                    <Badge.Ribbon text={risk.text} color={risk.color}>
-                                        <Card
-                                            hoverable
-                                            onClick={() => handleMachineClick(machine)}
-                                            style={{ 
-                                                borderLeft: `4px solid ${risk.color}`,
-                                                cursor: 'pointer',
-                                                transition: 'all 0.3s',
-                                            }}
-                                            styles={{ body: { padding: '16px' }}}
-                                        >
-                                            {/* Machine header */}
-                                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                                                <Avatar 
-                                                    icon={<DesktopOutlined />} 
-                                                    style={{ backgroundColor: risk.color, marginRight: '12px' }}
-                                                    size="large"
-                                                />
-                                                <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                    <Text strong style={{ display: 'block', fontSize: '15px' }} ellipsis>
-                                                        {machine.computerName}
-                                                    </Text>
-                                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                        <UserOutlined /> {machine.computerUser}
-                                                    </Text>
-                                                </div>
-                                            </div>
-
-                                            {/* IP */}
-                                            <Text type="secondary" style={{ fontSize: '11px', display: 'block', marginBottom: '8px' }}>
-                                                <GlobalOutlined /> {machine.ipAddress}
-                                            </Text>
-
-                                             {/* Stats row */}
-                                            <Row gutter={8} style={{ marginBottom: '8px' }}>
-                                                <Col span={6}>
-                                                    <div style={{ textAlign: 'center', background: '#f5f5f5', borderRadius: '6px', padding: '4px 0' }}>
-                                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1d39c4' }}>{machine.totalAlerts}</div>
-                                                        <div style={{ fontSize: '10px', color: '#8c8c8c' }}>Tổng</div>
-                                                    </div>
-                                                </Col>
-                                                <Col span={6}>
-                                                    <div style={{ textAlign: 'center', background: '#fff1f0', borderRadius: '6px', padding: '4px 0' }}>
-                                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#cf1322' }}>{machine.criticalAlerts}</div>
-                                                        <div style={{ fontSize: '10px', color: '#8c8c8c' }}>Nguy hiểm</div>
-                                                    </div>
-                                                </Col>
-                                                <Col span={6}>
-                                                    <div style={{ textAlign: 'center', background: '#f9f0ff', borderRadius: '6px', padding: '4px 0' }}>
-                                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#531dab' }}>{machine.keywordAlerts}</div>
-                                                        <div style={{ fontSize: '10px', color: '#8c8c8c' }}>Từ khóa</div>
-                                                    </div>
-                                                </Col>
-                                                <Col span={6}>
-                                                    <div style={{ textAlign: 'center', background: machine.documentLeakAlerts > 0 ? '#ffccc7' : '#fafafa', borderRadius: '6px', padding: '4px 0', border: machine.documentLeakAlerts > 0 ? '1px solid #ff4d4f' : '1px solid transparent' }}>
-                                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: machine.documentLeakAlerts > 0 ? '#f5222d' : '#d9d9d9' }}>{machine.documentLeakAlerts}</div>
-                                                        <div style={{ fontSize: '10px', color: machine.documentLeakAlerts > 0 ? '#cf1322' : '#8c8c8c' }}>Rò rỉ</div>
-                                                    </div>
-                                                </Col>
-                                            </Row>
-
-                                            {/* Latest keyword */}
-                                            {machine.latestKeyword && (
-                                                <Tag color="red" style={{ marginBottom: '4px', fontSize: '11px' }}>
-                                                    <KeyOutlined /> {machine.latestKeyword}
-                                                </Tag>
-                                            )}
-
-                                            {/* Last activity */}
-                                            <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: '4px' }}>
-                                                <ClockCircleOutlined /> Lần cuối: {dayjs(machine.lastActivity).format('DD/MM HH:mm')}
-                                            </div>
-                                        </Card>
-                                    </Badge.Ribbon>
-                                </Col>
-                            );
-                        })}
-                        {filteredMachines.length === 0 && (
-                            <Col span={24} style={{ textAlign: 'center', padding: '60px 0' }}>
-                                <DesktopOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />
-                                <div style={{ marginTop: '16px', color: '#8c8c8c' }}>
-                                    Không tìm thấy máy tính nào
-                                </div>
-                            </Col>
-                        )}
-                    </Row>
-                </>
-            )}
-
-            {/* ═══════ LEVEL 2: Detail View ═══════ */}
-            {selectedMachine && (
-                <>
-                    {/* Machine Info Summary Bar */}
-                    <Card size="small" style={{ marginBottom: '16px', background: '#fafafa' }}>
-                        <Space size="large" wrap>
-                            <Space>
-                                <Avatar icon={<DesktopOutlined />} style={{ backgroundColor: getRiskLevel(selectedMachine).color }} />
-                                <div>
-                                    <Text strong>{selectedMachine.computerName}</Text>
-                                    <br />
-                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                        <UserOutlined /> {selectedMachine.computerUser} &nbsp;|&nbsp; 
-                                        <GlobalOutlined /> {selectedMachine.ipAddress}
-                                    </Text>
-                                </div>
-                            </Space>
-                            <Tag color="blue">{selectedMachine.totalAlerts} cảnh báo</Tag>
-                            <Tag color="red">{selectedMachine.criticalAlerts} nguy hiểm</Tag>
-                            <Tag color="purple">{selectedMachine.keywordAlerts} từ khóa</Tag>
-                            <Tag color="cyan">{selectedMachine.screenshotAlerts} ảnh chụp</Tag>
-                            {selectedMachine.documentLeakAlerts > 0 && <Tag color="#f5222d">{selectedMachine.documentLeakAlerts} rò rỉ tài liệu</Tag>}
-                        </Space>
-                    </Card>
-
-                    {/* 📈 MACHINE-SPECIFIC ANALYTICS */}
-                    {detailLogs.length > 0 && (
-                        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                            <Col xs={24} lg={16}>
-                                <Card title={<Space><LineChartOutlined /> Xu hướng hoạt động của máy</Space>} size="small" bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                                    <div style={{ width: '100%', height: 200 }}>
-                                        <ResponsiveContainer>
-                                            <AreaChart data={detailChartData.trend}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                                <XAxis dataKey="time" axisLine={false} tickLine={false} style={{ fontSize: '10px' }} />
-                                                <YAxis axisLine={false} tickLine={false} style={{ fontSize: '10px' }} />
-                                                <Tooltip />
-                                                <Area type="monotone" dataKey="count" stroke="#1890ff" fill="#e6f7ff" name="Số sự kiện" />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </Card>
-                            </Col>
-                            <Col xs={24} lg={8}>
-                                <Card title={<Space><PieChartOutlined /> Phân bổ vi phạm</Space>} size="small" bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                                    <div style={{ width: '100%', height: 200 }}>
+                        </Card>
+                    </Col>
+                    {!isMobile && (
+                        <>
+                            <Col xs={24} md={12} lg={6}>
+                                <Card title={<Space><PieChartOutlined /> Loại vi phạm</Space>} size="small" bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                    <div style={{ width: '100%', height: 300 }}>
                                         <ResponsiveContainer>
                                             <PieChart>
-                                                <Pie
-                                                    data={detailChartData.types}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={40}
-                                                    outerRadius={60}
-                                                    dataKey="value"
-                                                >
-                                                    {detailChartData.types.map((entry, index) => (
-                                                        <Cell key={`cell-detail-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                    ))}
+                                                <Pie data={chartData.types} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">
+                                                    {chartData.types.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                                 </Pie>
                                                 <Tooltip />
                                             </PieChart>
@@ -1001,87 +715,135 @@ const MonitorLogsPage: React.FC = () => {
                                     </div>
                                 </Card>
                             </Col>
-                        </Row>
+                            <Col xs={24} md={12} lg={6}>
+                                <Card title={<Space><BarChartOutlined /> Top rủi ro</Space>} size="small" bordered={false} style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                    <div style={{ width: '100%', height: 300 }}>
+                                        <ResponsiveContainer>
+                                            <BarChart layout="vertical" data={chartData.topMachines}>
+                                                <XAxis type="number" hide />
+                                                <YAxis dataKey="name" type="category" width={80} style={{ fontSize: '11px' }} />
+                                                <Bar dataKey="count" fill="#ff4d4f" radius={[0, 4, 4, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </Card>
+                            </Col>
+                        </>
                     )}
-
-                    {/* Filters */}
-                    <Card style={{ marginBottom: '16px' }} size="small">
-                        <Space size="large" wrap>
-                            <div>
-                                <Text type="secondary" style={{ marginRight: 8 }}>{t('monitor.filter_type', 'Loại sự kiện')}:</Text>
-                                <Select 
-                                    placeholder={t('monitor.all', 'Tất cả')} 
-                                    style={{ width: 160 }} 
-                                    allowClear 
-                                    value={logType}
-                                    onChange={v => { setLogType(v); setDetailPage(1); }}
-                                >
-                                    <Option value="Screenshot">{t('monitor.type_screenshot', 'Chụp màn hình')}</Option>
-                                    <Option value="KeywordDetected">{t('monitor.type_keyword', 'Từ khóa nhạy cảm')}</Option>
-                                    <Option value="NetworkDisconnect">{t('monitor.type_network', 'Mất kết nối')}</Option>
-                                    <Option value="DocumentLeak">Rò rỉ Tài liệu</Option>
-                                </Select>
-                            </div>
-                            <div>
-                                <Text type="secondary" style={{ marginRight: 8 }}>{t('monitor.filter_severity', 'Mức độ tối thiểu')}:</Text>
-                                <Select 
-                                    placeholder={t('monitor.all', 'Tất cả')} 
-                                    style={{ width: 120 }} 
-                                    allowClear 
-                                    value={minSeverity}
-                                    onChange={v => { setMinSeverity(v); setDetailPage(1); }}
-                                >
-                                    <Option value={1}>1+</Option>
-                                    <Option value={4}>4+</Option>
-                                    <Option value={7}>7+</Option>
-                                    <Option value={9}>9+</Option>
-                                </Select>
-                            </div>
-                        </Space>
-                    </Card>
-
-                    {/* Detail Table */}
-                    <Table
-                        columns={columns}
-                        dataSource={detailLogs}
-                        rowKey="id"
-                        loading={loading}
-                        pagination={{
-                            current: detailPage,
-                            pageSize: detailPageSize,
-                            total: detailTotal,
-                            onChange: (p) => setDetailPage(p),
-                            showSizeChanger: false,
-                        }}
-                    />
-                </>
+                </Row>
             )}
 
-            {/* Upload Modal for Archives */}
-            <Modal
-                title="Mở Nhật ký Lưu trữ (.zip)"
-                open={uploadModalVisible}
-                onCancel={() => setUploadModalVisible(false)}
-                footer={null}
-                width={600}
-            >
-                <div style={{ padding: '20px 0' }}>
-                    <Dragger
-                        name="file"
-                        accept=".zip"
-                        multiple={false}
-                        beforeUpload={handleUploadArchive}
-                        showUploadList={false}
-                    >
-                        <p className="ant-upload-drag-icon">
-                            <InboxOutlined style={{ color: '#faad14' }} />
-                        </p>
-                        <p className="ant-upload-text">Nhấp hoặc kéo thả tệp ZIP lưu trữ vào đây</p>
-                        <p className="ant-upload-hint">
-                            Tệp phải được xuất từ chức năng "Nén & Lưu trữ" của hệ thống InsiderThreat.
-                        </p>
-                    </Dragger>
-                </div>
+            {/* ═══════ MAIN CONTENT (Mobile Optimized) ═══════ */}
+            <div style={{ marginTop: 8 }}>
+                {isArchiveMode ? (
+                    /* 📁 Archive View */
+                    selectedArchiveMachine ? (
+                        <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                                <Button icon={<ArrowLeftOutlined />} onClick={() => setSelectedArchiveMachine(null)}>Danh sách máy</Button>
+                                {isMobile && <Tag color="orange">Offline</Tag>}
+                            </div>
+                            {isMobile ? (
+                                filteredArchiveLogs.map(log => renderMobileLogItem(log))
+                            ) : (
+                                <Card variant="borderless" style={{ borderRadius: 12 }}>
+                                    <Table columns={columns} dataSource={filteredArchiveLogs} size="small" rowKey={(r) => `${r.timestamp}-${Math.random()}`} />
+                                </Card>
+                            )}
+                        </>
+                    ) : (
+                        <Row gutter={[12, 12]}>
+                            {archiveMachines.map(m => (
+                                <Col span={24} key={m.computerName + m.computerUser}>
+                                    <Card onClick={() => setSelectedArchiveMachine(m)} hoverable size="small" style={{ borderLeft: '4px solid #faad14', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Space><Avatar icon={<DesktopOutlined />} style={{ background: '#faad14' }} /> <Text strong>{m.computerName}</Text></Space>
+                                            <Badge count={m.totalAlerts} color="#faad14" />
+                                        </div>
+                                    </Card>
+                                </Col>
+                            ))}
+                        </Row>
+                    )
+                ) : selectedMachine ? (
+                    /* 💻 Detail View */
+                    <div>
+                        {/* Detail Analytics Header (Hide on tiny screens if needed) */}
+                        {!isMobile && detailLogs.length > 0 && (
+                            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                                <Col span={16}>
+                                    <Card title="Hoạt động gần đây" size="small" style={{ borderRadius: 12 }}>
+                                        <div style={{ height: 150 }}>
+                                            <ResponsiveContainer>
+                                                <AreaChart data={detailChartData.trend}>
+                                                    <Area type="monotone" dataKey="count" stroke="#1890ff" fill="#e6f7ff" />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </Card>
+                                </Col>
+                                <Col span={8}>
+                                    <Card title="Loại vi phạm" size="small" style={{ borderRadius: 12 }}>
+                                        <div style={{ height: 150 }}>
+                                            <ResponsiveContainer>
+                                                <PieChart>
+                                                    <Pie data={detailChartData.types} dataKey="value" nameKey="name" outerRadius={50} fill="#1890ff" />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </Card>
+                                </Col>
+                            </Row>
+                        )}
+
+                        {isMobile ? (
+                            <>
+                                {detailLogs.map(log => renderMobileLogItem(log))}
+                                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16, gap: 12 }}>
+                                    <Button disabled={detailPage === 1} onClick={() => setDetailPage(p => p - 1)}>Trước</Button>
+                                    <Tag style={{ margin: 0, display: 'flex', alignItems: 'center' }}>Trang {detailPage}</Tag>
+                                    <Button disabled={detailLogs.length < detailPageSize} onClick={() => setDetailPage(p => p + 1)}>Sau</Button>
+                                </div>
+                            </>
+                        ) : (
+                            <Card variant="borderless" style={{ borderRadius: 12 }}>
+                                <Table columns={columns} dataSource={detailLogs} rowKey="id" loading={loading} pagination={{ current: detailPage, total: detailTotal, onChange: p => setDetailPage(p) }} />
+                            </Card>
+                        )}
+                    </div>
+                ) : (
+                    /* 🖥️ Machine List */
+                    <Row gutter={[12, 12]}>
+                        {filteredMachines.map(machine => (
+                            <Col xs={24} sm={12} lg={8} key={machine.computerName + machine.computerUser}>
+                                <Card onClick={() => handleMachineClick(machine)} hoverable size="small" style={{ borderLeft: `4px solid ${getRiskLevel(machine).color}`, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Space>
+                                            <Avatar icon={<DesktopOutlined />} style={{ backgroundColor: getRiskLevel(machine).color }} />
+                                            <div>
+                                                <Text strong>{machine.computerName}</Text>
+                                                <br />
+                                                <Text type="secondary" style={{ fontSize: 11 }}>{machine.computerUser}</Text>
+                                            </div>
+                                        </Space>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <Badge count={machine.totalAlerts} overflowCount={99} color="#1890ff" />
+                                            {machine.criticalAlerts > 0 && <div style={{ color: '#f5222d', fontSize: 10, marginTop: 4 }}>{machine.criticalAlerts} critical</div>}
+                                        </div>
+                                    </div>
+                                </Card>
+                            </Col>
+                        ))}
+                    </Row>
+                )}
+            </div>
+
+            {/* 📁 Upload Modal */}
+            <Modal title="Mở Nhật ký Lưu trữ (.zip)" open={uploadModalVisible} onCancel={() => setUploadModalVisible(false)} footer={null} width={isMobile ? '95%' : 600}>
+                <Dragger name="file" accept=".zip" beforeUpload={handleUploadArchive} showUploadList={false}>
+                    <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#faad14' }} /></p>
+                    <p className="ant-upload-text">Kéo thả tệp ZIP vào đây</p>
+                </Dragger>
             </Modal>
         </div>
     );

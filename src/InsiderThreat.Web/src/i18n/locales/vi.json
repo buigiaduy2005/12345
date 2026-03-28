@@ -286,7 +286,7 @@
     },
     "dashboard": {
         "logged_out": "Đã đăng xuất!",
-        "menu_feed": "Feed",
+        "menu_feed": "Bảng tin",
         "menu_usb": "Quản lý USB",
         "menu_documents": "Nhật ký Tài liệu",
         "menu_attendance": "Chấm công",
@@ -302,7 +302,7 @@
         "usb_title": "🔐 Quản lý Thiết bị USB",
         "usb_sec": "Bảo mật USB",
         "admin_label": "Quản trị viên InsiderThreat",
-        "nav_feed": "Feed",
+        "nav_feed": "Bảng tin",
         "nav_users": "Nhân sự",
         "nav_posts": "Bài viết",
         "nav_reports": "Vi phạm",
