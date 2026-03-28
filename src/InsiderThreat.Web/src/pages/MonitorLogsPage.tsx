@@ -20,11 +20,19 @@ import {
     DeleteOutlined,
     FileSearchOutlined,
     InboxOutlined,
-    ExportOutlined
+    ExportOutlined,
+    PieChartOutlined,
+    LineChartOutlined,
+    BarChartOutlined
 } from '@ant-design/icons';
-import { Table, Tag, Card, Row, Col, Statistic, Select, Input, Space, Button, Typography, Avatar, Badge, App, Breadcrumb, Modal, Checkbox, Upload } from 'antd';
+import { Table, Tag, Card, Row, Col, Statistic, Select, Input, Space, Button, Typography, Avatar, Badge, App, Breadcrumb, Modal, Checkbox, Upload, Empty } from 'antd';
 import { monitorService } from '../services/monitorService';
 import type { MonitorLog, MonitorSummary } from '../services/monitorService';
+import { 
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+    PieChart, Pie, Cell, Legend, 
+    BarChart, Bar
+} from 'recharts';
 
 const { Dragger } = Upload;
 const { Title, Text } = Typography;
@@ -120,6 +128,42 @@ const MonitorLogsPage: React.FC = () => {
             loadDetailLogs(selectedMachine.computerName, selectedMachine.computerUser);
         }
     }, [selectedMachine, detailPage, logType, minSeverity]);
+
+    // 📊 PHÂN TÍCH DỮ LIỆU BIỂU ĐỒ
+    const chartData = useMemo(() => {
+        if (!allLogs || allLogs.length === 0) return { trend: [], types: [], topMachines: [] };
+
+        const hourlyMap = new Map();
+        const typeMap = new Map();
+        const machineMap = new Map();
+
+        allLogs.forEach(log => {
+            // 1. Xu hướng theo giờ
+            const hour = dayjs(log.timestamp).format('HH:00');
+            hourlyMap.set(hour, (hourlyMap.get(hour) || 0) + 1);
+
+            // 2. Tỉ lệ loại vi phạm
+            typeMap.set(log.logType, (typeMap.get(log.logType) || 0) + 1);
+
+            // 3. Top máy rủi ro
+            machineMap.set(log.computerName, (machineMap.get(log.computerName) || 0) + 1);
+        });
+
+        const trend = Array.from(hourlyMap.entries())
+            .map(([time, count]) => ({ time, count }))
+            .sort((a, b) => a.time.localeCompare(b.time));
+
+        const types = Array.from(typeMap.entries()).map(([name, value]) => ({ name, value }));
+        
+        const topMachines = Array.from(machineMap.entries())
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+
+        return { trend, types, topMachines };
+    }, [allLogs]);
+
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#f5222d'];
 
     // Build machine list from all logs
     const machines: MachineInfo[] = useMemo(() => {
@@ -557,8 +601,81 @@ const MonitorLogsPage: React.FC = () => {
             </Row>
             )}
 
-            {/* ═══════ ARCHIVE VIEW TABLE ═══════ */}
-            {isArchiveMode && (
+            {/* 📈 ANALYTICS DASHBOARD - THỐNG KÊ CHI TIẾT BẰNG BIỂU ĐỒ */}
+            {!selectedMachine && !isArchiveMode && allLogs.length > 0 && (
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                {/* Xu hướng theo thời gian */}
+                <Col xs={24} lg={12}>
+                    <Card title={<Space><LineChartOutlined /> Xu hướng vi phạm trong ngày</Space>} bordered={false} style={{ borderRadius: 12, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <ResponsiveContainer>
+                                <AreaChart data={chartData.trend}>
+                                    <defs>
+                                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                    <XAxis dataKey="time" axisLine={false} tickLine={false} style={{ fontSize: '12px' }} />
+                                    <YAxis axisLine={false} tickLine={false} style={{ fontSize: '12px' }} />
+                                    <Tooltip 
+                                        contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                    />
+                                    <Area type="monotone" dataKey="count" stroke="#8884d8" fillOpacity={1} fill="url(#colorCount)" name="Số lượng" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </Card>
+                </Col>
+
+                {/* Tỉ lệ loại vi phạm */}
+                <Col xs={24} md={12} lg={6}>
+                    <Card title={<Space><PieChartOutlined /> Loại vi phạm</Space>} bordered={false} style={{ borderRadius: 12, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <ResponsiveContainer>
+                                <PieChart>
+                                    <Pie
+                                        data={chartData.types}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {chartData.types.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </Card>
+                </Col>
+
+                {/* Top máy rủi ro */}
+                <Col xs={24} md={12} lg={6}>
+                    <Card title={<Space><BarChartOutlined /> Top 5 Máy rủi ro</Space>} bordered={false} style={{ borderRadius: 12, height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <ResponsiveContainer>
+                                <BarChart layout="vertical" data={chartData.topMachines}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                                    <XAxis type="number" hide />
+                                    <YAxis dataKey="name" type="category" width={80} axisLine={false} tickLine={false} style={{ fontSize: '11px' }} />
+                                    <Tooltip cursor={{fill: '#f5f5f5'}} />
+                                    <Bar dataKey="count" fill="#ff4d4f" radius={[0, 4, 4, 0]} barSize={20} name="Số cảnh báo" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </Card>
+                </Col>
+            </Row>
+            )}
+
+            {/* ═══════ ARCHIVE VIEW TABLE ═══════ */}            {isArchiveMode && (
                 <Card title="Dữ liệu Nhật ký từ tệp lưu trữ">
                     <Table
                         columns={columns}

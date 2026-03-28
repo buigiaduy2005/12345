@@ -43,9 +43,29 @@ namespace InsiderThreat.Server.Controllers
         {
             alert.CreatedAt = DateTime.UtcNow;
             if (alert.TriggeredAt == default) alert.TriggeredAt = DateTime.UtcNow;
+
+            // 🛡️ IMMUTABLE LOG CHAIN (Nguyên tắc Bất biến)
+            // 1. Lấy bản ghi log mới nhất từ Database
+            var lastAlert = await _alerts.Find(_ => true)
+                .SortByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            // 2. Gán mã Hash của bản ghi trước vào bản ghi mới
+            alert.PreviousHash = lastAlert?.CurrentHash ?? "GENESIS_BLOCK";
+
+            // 3. Tính toán mã Hash cho bản ghi hiện tại (SHA-256)
+            alert.CurrentHash = CalculateAlertHash(alert);
             
             await _alerts.InsertOneAsync(alert);
             return CreatedAtAction(nameof(GetAlerts), new { }, alert);
+        }
+
+        private string CalculateAlertHash(AlertModel alert)
+        {
+            var rawData = $"{alert.PreviousHash}|{alert.TriggeredAt:O}|{alert.Title}|{alert.AffectedUser}|{alert.MachineName}|{alert.Description}";
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var bytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(rawData));
+            return Convert.ToBase64String(bytes);
         }
 
         [HttpPatch("{id}/resolve")]

@@ -128,6 +128,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<InsiderThreat.Server.Services.IEmailService, InsiderThreat.Server.Services.EmailService>();
 builder.Services.AddSingleton<InsiderThreat.Server.Services.IMessageEncryptionService, InsiderThreat.Server.Services.MessageEncryptionService>();
 builder.Services.AddScoped<InsiderThreat.Server.Services.IWatermarkService, InsiderThreat.Server.Services.WatermarkService>();
+builder.Services.AddSingleton<InsiderThreat.Server.Services.FileEncryptionService>();
 // ==========================================
 
 // ==========================================

@@ -17,13 +17,19 @@ namespace InsiderThreat.Server.Controllers
         private readonly IMongoCollection<User> _users;
         private readonly IGridFSBucket _gridFS;
         private readonly ILogger<DocumentLibraryController> _logger;
+        private readonly InsiderThreat.Server.Services.FileEncryptionService _encryptionService;
 
-        public DocumentLibraryController(IMongoDatabase database, IGridFSBucket gridFS, ILogger<DocumentLibraryController> logger)
+        public DocumentLibraryController(
+            IMongoDatabase database, 
+            IGridFSBucket gridFS, 
+            ILogger<DocumentLibraryController> logger,
+            InsiderThreat.Server.Services.FileEncryptionService encryptionService)
         {
             _documents = database.GetCollection<SharedDocument>("SharedDocuments");
             _users = database.GetCollection<User>("Users");
             _gridFS = gridFS;
             _logger = logger;
+            _encryptionService = encryptionService;
         }
 
         [HttpGet]
@@ -106,21 +112,28 @@ namespace InsiderThreat.Server.Controllers
 
                 _logger.LogInformation($"Uploading document: {file.FileName} ({file.Length} bytes) with MinRole: {minimumRole}, AllowedUsers: {allowedUserIds.Count}, AllowedDownloaders: {allowedDownloadUserIds.Count}");
                 
-                // 1. Upload to GridFS
+                // 1. Encrypt and Upload to GridFS
                 var options = new GridFSUploadOptions
                 {
                     Metadata = new BsonDocument
                     {
                         { "originalName", file.FileName },
                         { "contentType", file.ContentType },
-                        { "uploadedAt", DateTime.UtcNow }
+                        { "uploadedAt", DateTime.UtcNow },
+                        { "isEncrypted", true }
                     }
                 };
 
-                using var stream = file.OpenReadStream();
-                var fileId = await _gridFS.UploadFromStreamAsync(file.FileName, stream, options);
+                using var sourceStream = file.OpenReadStream();
+                using var encryptedStream = new MemoryStream();
+                
+                // Perform military-grade encryption
+                await _encryptionService.EncryptStreamAsync(sourceStream, encryptedStream);
+                encryptedStream.Position = 0;
 
-                _logger.LogInformation($"Uploaded to GridFS with ID: {fileId}");
+                var fileId = await _gridFS.UploadFromStreamAsync(file.FileName, encryptedStream, options);
+
+                _logger.LogInformation($"Uploaded ENCRYPTED file to GridFS with ID: {fileId}");
 
                 // 2. Save metadata
                 var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown";
@@ -247,6 +260,44 @@ namespace InsiderThreat.Server.Controllers
                 return NotFound();
 
             return Ok(new { message = "Bộ lọc và quyền xem đã được cập nhật" });
+        }
+
+        [HttpGet("{id}/file")]
+        public async Task<IActionResult> GetFile(string id)
+        {
+            var doc = await _documents.Find(d => d.Id == id).FirstOrDefaultAsync();
+            if (doc == null) return NotFound();
+
+            // 🛡️ Kiểm tra quyền xem file
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Nhân viên";
+            
+            bool canView = userRole == "Admin" || doc.UploaderId == userId || (doc.AllowedUserIds != null && doc.AllowedUserIds.Contains(userId!));
+            if (!canView)
+            {
+                var userRoleLevel = GetRoleLevel(userRole);
+                var docMinRoleLevel = GetRoleLevel(doc.MinimumRole);
+                if (docMinRoleLevel > userRoleLevel) return Forbid();
+            }
+
+            try
+            {
+                if (!ObjectId.TryParse(doc.FileId, out var fileId)) return BadRequest("Invalid file reference");
+
+                using var encryptedStream = await _gridFS.OpenDownloadStreamAsync(fileId);
+                var outputStream = new MemoryStream();
+
+                // 🔓 GIẢI MÃ TRONG BỘ NHỚ (Military-grade decryption)
+                await _encryptionService.DecryptStreamAsync(encryptedStream, outputStream);
+                outputStream.Position = 0;
+
+                return File(outputStream, doc.ContentType, doc.FileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error serving file: {doc.FileName}");
+                return StatusCode(500, "Lỗi khi giải mã tài liệu bảo mật");
+            }
         }
 
         private int GetRoleLevel(string role)

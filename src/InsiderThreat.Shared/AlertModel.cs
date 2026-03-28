@@ -19,5 +19,9 @@ namespace InsiderThreat.Shared
         public bool IsResolved { get; set; } = false;
         public string? ResolutionComment { get; set; }
         public DateTime TriggeredAt { get; set; } = DateTime.UtcNow;
+
+        // 🛡️ SECURITY CHAIN (Chuỗi bảo mật bất biến)
+        public string? PreviousHash { get; set; }
+        public string? CurrentHash { get; set; }
     }
 }
