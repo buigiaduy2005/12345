@@ -45,7 +45,7 @@ export default function SynchroHeader({ breadcrumb, members = [], onInviteClick 
 
                 <Space size={16} className={styles.membersSection}>
                     {members.length > 0 ? (
-                        <Avatar.Group maxCount={3} size={32} className={styles.avatarGroup}>
+                        <Avatar.Group max={{ count: 3 }} size={32} className={styles.avatarGroup}>
                             {members.map(member => (
                                 <Avatar key={member.id} src={member.avatarUrl || `https://ui-avatars.com/api/?name=${member.username}`}>
                                     {member.fullName?.charAt(0) || member.username?.charAt(0)}
@@ -53,7 +53,7 @@ export default function SynchroHeader({ breadcrumb, members = [], onInviteClick 
                             ))}
                         </Avatar.Group>
                     ) : (
-                        <Avatar.Group maxCount={3} size={32} className={styles.avatarGroup}>
+                        <Avatar.Group max={{ count: 3 }} size={32} className={styles.avatarGroup}>
                             <Avatar src="https://i.pravatar.cc/150?u=1" />
                             <Avatar src="https://i.pravatar.cc/150?u=2" />
                             <Avatar src="https://i.pravatar.cc/150?u=3" />

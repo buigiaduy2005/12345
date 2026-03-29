@@ -440,6 +440,7 @@ namespace InsiderThreat.Server.Controllers
                 return StatusCode(500, "Internal server error during upload");
             }
         }
+        [HttpGet("{id}/analytics")]
         public async Task<IActionResult> GetDailyAnalytics(string id)
         {
             // Fetch all tasks for the group that are completed

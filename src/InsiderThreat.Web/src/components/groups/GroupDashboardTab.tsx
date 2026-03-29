@@ -295,7 +295,7 @@ export default function GroupDashboardTab({ onInviteClick }: GroupDashboardTabPr
                 open={isTaskModalVisible}
                 onCancel={() => setIsTaskModalVisible(false)}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
             >
                 <Form form={taskForm} layout="vertical" onFinish={handleCreateTask}>
                     <Form.Item name="title" label={t('project_detail.dashboard.task_title')} rules={[{ required: true }]}>

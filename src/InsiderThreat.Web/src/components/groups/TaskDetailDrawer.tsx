@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Drawer, Button, Input, Space, Typography, Spin, Select, DatePicker, Mentions, Upload, message, Tooltip, Avatar } from 'antd';
+import { App, Drawer, Button, Input, Space, Typography, Spin, Select, DatePicker, Mentions, Upload, Tooltip, Avatar } from 'antd';
 import { 
     StarOutlined, LinkOutlined, CloseOutlined, 
     UserOutlined, TagOutlined, ClockCircleOutlined,
@@ -59,6 +59,7 @@ interface TaskDetailDrawerProps {
 }
 
 export default function TaskDetailDrawer({ open, onClose, task, groupId, members, onTaskUpdate, currentUserIsAdmin = false }: TaskDetailDrawerProps) {
+    const { message } = App.useApp();
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<'Description' | 'Comment' | 'Setting'>('Comment');
     const [comments, setComments] = useState<Comment[]>([]);
@@ -202,9 +203,9 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
             closable={false}
             onClose={onClose}
             open={open}
-            width="550px"
+            width={550}
             className="synchro-task-drawer"
-            maskStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+            styles={{ mask: { backgroundColor: 'rgba(0, 0, 0, 0.2)' } }}
         >
             <div className="task-drawer-container">
                 {/* Header */}
@@ -227,7 +228,7 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
                     <div className="attr-row">
                         <div className="attr-label"><TagOutlined /> {t('project_detail.task_drawer.tags')}</div>
                         <div className="task-field-value">
-                            <Select defaultValue="Mobile App" bordered={false} className="transparent-select">
+                            <Select defaultValue="Mobile App" variant="borderless" className="transparent-select">
                                 <Option value="Mobile App">Mobile App</Option>
                                 <Option value="Web App">Web App</Option>
                                 <Option value="Marketing">Marketing</Option>
@@ -383,7 +384,7 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
                 <div className="drawer-footer-actions">
                     <div className="collaborators">
                         <Text type="secondary" style={{ marginRight: 8 }}>{t('project_detail.task_drawer.collaborators')}</Text>
-                        <Avatar.Group size={24} maxCount={3}>
+                        <Avatar.Group size={24} max={{ count: 3 }}>
                             {members.slice(0, 4).map(m => <Avatar key={m.id} src={m.avatarUrl} />)}
                         </Avatar.Group>
                         <Button size="small" className="add-collab-btn">+</Button>
