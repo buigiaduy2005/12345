@@ -135,7 +135,7 @@ export default function ProjectSidebar({ open, onClose, projectName }: ProjectSi
             open={open}
             width={400}
             closable={false}
-            maskStyle={{ background: 'rgba(0,0,0,0.05)', backdropFilter: 'blur(4px)' }}
+            styles={{ mask: { background: 'rgba(0,0,0,0.05)', backdropFilter: 'blur(4px)' } }}
         >
             <div className="sidebar-content">
                 <div className="sidebar-header">

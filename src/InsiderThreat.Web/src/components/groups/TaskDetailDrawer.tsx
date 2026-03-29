@@ -4,11 +4,15 @@ import { App, Drawer, Button, Input, Space, Typography, Spin, Select, DatePicker
 import { 
     StarOutlined, LinkOutlined, CloseOutlined, 
     UserOutlined, TagOutlined, ClockCircleOutlined,
-    FireOutlined, CheckCircleOutlined, PaperClipOutlined
+    FireOutlined, CheckCircleOutlined, PaperClipOutlined,
+    FileOutlined, FilePdfOutlined, FileWordOutlined, 
+    FileExcelOutlined, FileZipOutlined, FileImageOutlined,
+    FileTextOutlined, FilePptOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { api } from '../../services/api';
+import FilePreviewModal from './FilePreviewModal';
 import './TaskDetailDrawer.css';
 
 dayjs.extend(relativeTime);
@@ -59,6 +63,33 @@ interface TaskDetailDrawerProps {
     currentUserIsAdmin?: boolean; // new prop to enforce wait approval
 }
 
+const FILE_ICONS_CONFIG: Record<string, { icon: any; color: string; bg: string }> = {
+    pdf: { icon: <FilePdfOutlined />, color: '#ff4d4f', bg: 'rgba(255, 77, 79, 0.1)' },
+    doc: { icon: <FileWordOutlined />, color: '#1890ff', bg: 'rgba(24, 144, 255, 0.1)' },
+    docx: { icon: <FileWordOutlined />, color: '#1890ff', bg: 'rgba(24, 144, 255, 0.1)' },
+    xls: { icon: <FileExcelOutlined />, color: '#52c41a', bg: 'rgba(82, 196, 26, 0.1)' },
+    xlsx: { icon: <FileExcelOutlined />, color: '#52c41a', bg: 'rgba(82, 196, 26, 0.1)' },
+    ppt: { icon: <FilePptOutlined />, color: '#fa541c', bg: 'rgba(250, 84, 28, 0.1)' },
+    pptx: { icon: <FilePptOutlined />, color: '#fa541c', bg: 'rgba(250, 84, 28, 0.1)' },
+    txt: { icon: <FileTextOutlined />, color: '#595959', bg: 'rgba(89, 89, 89, 0.1)' },
+    zip: { icon: <FileZipOutlined />, color: '#faad14', bg: 'rgba(250, 173, 20, 0.1)' },
+    rar: { icon: <FileZipOutlined />, color: '#faad14', bg: 'rgba(250, 173, 20, 0.1)' },
+    image: { icon: <FileImageOutlined />, color: '#722ed1', bg: 'rgba(114, 46, 209, 0.1)' },
+    other: { icon: <FileOutlined />, color: '#8c8c8c', bg: 'rgba(140, 140, 140, 0.1)' },
+};
+
+const getFileType = (fileName: string) => {
+    const ext = fileName?.split('.').pop()?.toLowerCase() || '';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+    if (['pdf'].includes(ext)) return 'pdf';
+    if (['doc', 'docx'].includes(ext)) return 'doc';
+    if (['xls', 'xlsx'].includes(ext)) return 'xls';
+    if (['ppt', 'pptx'].includes(ext)) return 'ppt';
+    if (['txt'].includes(ext)) return 'txt';
+    if (['zip', 'rar', '7z'].includes(ext)) return 'zip';
+    return 'other';
+};
+
 export default function TaskDetailDrawer({ open, onClose, task, groupId, members, onTaskUpdate, currentUserIsAdmin = false }: TaskDetailDrawerProps) {
     const { message } = App.useApp();
     const { t } = useTranslation();
@@ -73,6 +104,9 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
     const [uploading, setUploading] = useState(false);
     
     const commentsEndRef = useRef<HTMLDivElement>(null);
+
+    // File preview state
+    const [previewFile, setPreviewFile] = useState<{ url: string; name: string; size?: number } | null>(null);
 
     // Editing states for immediate UX
     const [editedStatus, setEditedStatus] = useState<string>('');
@@ -230,6 +264,7 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
     };
 
     return (
+        <>
         <Drawer
             placement="right"
             closable={false}
@@ -341,9 +376,16 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
                                                 <div className="comment-box">
                                                     <p>{parent.content}</p>
                                                     {parent.attachmentUrl && (
-                                                        <div className="file-attachment-preview">
-                                                            <div className={`file-icon ${parent.attachmentName?.split('.').pop()?.toLowerCase() || 'default'}`}>
-                                                                {parent.attachmentName?.split('.').pop()?.toUpperCase().substring(0, 1) || 'F'}
+                                                    <div className="file-attachment-preview" 
+                                                        style={{ cursor: 'pointer' }}
+                                                        onClick={() => setPreviewFile({ url: parent.attachmentUrl!, name: parent.attachmentName!, size: parent.attachmentSize })}
+                                                        title="Nhấn để xem trực tiếp"
+                                                    >
+                                                            <div className="file-icon-wrapper" style={{ 
+                                                                background: FILE_ICONS_CONFIG[getFileType(parent.attachmentName || '')]?.bg || FILE_ICONS_CONFIG.other.bg,
+                                                                color: FILE_ICONS_CONFIG[getFileType(parent.attachmentName || '')]?.color || FILE_ICONS_CONFIG.other.color
+                                                            }}>
+                                                                {FILE_ICONS_CONFIG[getFileType(parent.attachmentName || '')]?.icon || FILE_ICONS_CONFIG.other.icon}
                                                             </div>
                                                             <div className="file-details">
                                                                 <a href={parent.attachmentUrl} target="_blank" rel="noreferrer">
@@ -373,9 +415,16 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
                                                     <div className="comment-box">
                                                         <p>{reply.content}</p>
                                                         {reply.attachmentUrl && (
-                                                            <div className="file-attachment-preview">
-                                                                <div className={`file-icon ${reply.attachmentName?.split('.').pop()?.toLowerCase() || 'default'}`}>
-                                                                    {reply.attachmentName?.split('.').pop()?.toUpperCase().substring(0, 1) || 'F'}
+                                                              <div className="file-attachment-preview"
+                                                                  style={{ cursor: 'pointer' }}
+                                                                  onClick={() => setPreviewFile({ url: reply.attachmentUrl!, name: reply.attachmentName!, size: reply.attachmentSize })}
+                                                                  title="Nhấn để xem trực tiếp"
+                                                              >
+                                                                <div className="file-icon-wrapper" style={{ 
+                                                                    background: FILE_ICONS_CONFIG[getFileType(reply.attachmentName || '')]?.bg || FILE_ICONS_CONFIG.other.bg,
+                                                                    color: FILE_ICONS_CONFIG[getFileType(reply.attachmentName || '')]?.color || FILE_ICONS_CONFIG.other.color
+                                                                }}>
+                                                                    {FILE_ICONS_CONFIG[getFileType(reply.attachmentName || '')]?.icon || FILE_ICONS_CONFIG.other.icon}
                                                                 </div>
                                                                 <div className="file-details">
                                                                     <a href={reply.attachmentUrl} target="_blank" rel="noreferrer">
@@ -459,5 +508,16 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
                 </div>
             </div>
         </Drawer>
+
+        {previewFile && (
+            <FilePreviewModal
+                open={true}
+                onClose={() => setPreviewFile(null)}
+                fileUrl={previewFile.url}
+                fileName={previewFile.name}
+                fileSize={previewFile.size}
+            />
+        )}
+        </>
     );
 }

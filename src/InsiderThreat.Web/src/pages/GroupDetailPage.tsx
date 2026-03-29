@@ -30,7 +30,7 @@ export default function GroupDetailPage() {
         const fetchGroupName = async () => {
             try {
                 const res = await api.get<any>(`/api/groups/${id}`);
-                setGroupName(res.name);
+                setGroupName(res.name || res.Name || '');
             } catch (err) {
                 console.error('Failed to fetch group name', err);
             }

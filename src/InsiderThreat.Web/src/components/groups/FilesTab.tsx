@@ -9,6 +9,7 @@ import {
     UserAddOutlined, MoreOutlined, DatabaseOutlined
 } from '@ant-design/icons';
 import { api, API_BASE_URL } from '../../services/api';
+import FilePreviewModal from './FilePreviewModal';
 import './FilesTab.css';
 
 interface FileItem {
@@ -49,6 +50,7 @@ export default function FilesTab() {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
     const [dragOver, setDragOver] = useState(false);
+    const [previewFile, setPreviewFile] = useState<{ url: string; name: string; size?: number } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const fetchData = async () => {
@@ -129,6 +131,7 @@ export default function FilesTab() {
     if (loading) return <div className="loading-files"><Spin size="large" /></div>;
 
     return (
+        <>
         <div className="filesTab animate-in">
             <div className="files-header">
                 <div className="header-info">
@@ -211,6 +214,18 @@ export default function FilesTab() {
                                             shape="circle" 
                                             icon={<DownloadOutlined />} 
                                             onClick={() => handleDownload(file)} 
+                                            title="Tải xuống"
+                                        />
+                                        <Button 
+                                            type="text" 
+                                            shape="circle" 
+                                            icon={<span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>} 
+                                            onClick={() => setPreviewFile({
+                                                url: `${API_BASE_URL}/api/Upload/${file.fileId}`,
+                                                name: file.fileName,
+                                                size: file.size
+                                            })}
+                                            title="Xem trực tiếp"
                                         />
                                         <Button type="text" shape="circle" icon={<MoreOutlined />} />
                                     </div>
@@ -275,5 +290,15 @@ export default function FilesTab() {
                 </div>
             </div>
         </div>
+        {previewFile && (
+            <FilePreviewModal
+                open={true}
+                onClose={() => setPreviewFile(null)}
+                fileUrl={previewFile.url}
+                fileName={previewFile.name}
+                fileSize={previewFile.size}
+            />
+        )}
+        </>
     );
 }

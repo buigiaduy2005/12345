@@ -271,23 +271,21 @@
     border-radius: 8px;
 }
 
-.file-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
+.file-icon-wrapper {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
 }
 
-.file-icon.figma { background: #f24e1e; }
-.file-icon.word { background: #2b579a; }
-.file-icon.pdf { background: #ef4444; }
-.file-icon.zip { background: #8b5cf6; }
-.file-icon.jpg, .file-icon.png { background: #ec4899; }
-.file-icon.default { background: #6b7280; }
+.file-attachment-preview:hover .file-icon-wrapper {
+    transform: scale(1.05);
+}
 
 .file-details {
     display: flex;
