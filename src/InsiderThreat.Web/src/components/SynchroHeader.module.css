@@ -4,8 +4,8 @@
     justify-content: space-between;
     height: 72px;
     padding: 0 32px;
-    background: #ffffff;
-    border-bottom: 1px solid #f3f4f6;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
     font-family: 'Inter', sans-serif;
 }
 
@@ -18,20 +18,21 @@
 }
 
 .breadcrumbItem {
-    color: #6b7280;
+    color: var(--color-text-muted);
 }
 
 .breadcrumbItem.active {
-    background: #f3f4f6;
-    color: #111827;
+    background: var(--color-bg);
+    color: var(--color-text-main);
     padding: 6px 12px;
     border-radius: 8px;
     font-weight: 600;
 }
 
 .separator {
-    color: #9ca3af;
+    color: var(--color-text-muted);
     font-size: 10px;
+    opacity: 0.5;
 }
 
 .headerRight {
@@ -43,8 +44,8 @@
 .searchWrapper {
     display: flex;
     align-items: center;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 8px 16px;
     width: 250px;
@@ -52,13 +53,13 @@
 }
 
 .searchWrapper:focus-within {
-    border-color: #d1d5db;
-    box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.05);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-light);
     width: 300px;
 }
 
 .searchIcon {
-    color: #9ca3af;
+    color: var(--color-text-muted);
     font-size: 16px;
     margin-right: 8px;
 }
@@ -68,12 +69,12 @@
     outline: none;
     background: transparent;
     width: 100%;
-    color: #111827;
+    color: var(--color-text-main);
     font-size: 14px;
 }
 
 .searchInput::placeholder {
-    color: #9ca3af;
+    color: var(--color-text-muted);
 }
 
 .actions {
@@ -88,20 +89,21 @@
     width: 36px;
     height: 36px;
     border-radius: 8px;
-    color: #4b5563;
-    border: 1px solid #e5e7eb;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    background: transparent;
 }
 
 .actionBtn:hover {
-    background: #f9fafb;
-    color: #111827;
-    border-color: #d1d5db;
+    background: var(--color-bg);
+    color: var(--color-text-main);
+    border-color: var(--color-text-muted);
 }
 
 .divider {
     width: 1px;
     height: 24px;
-    background: #e5e7eb;
+    background: var(--color-border);
 }
 
 .membersSection {
@@ -114,8 +116,8 @@
 }
 
 .inviteBtn {
-    background: #111827;
-    color: #ffffff;
+    background: var(--color-text-main);
+    color: var(--color-surface);
     border: none;
     border-radius: 8px;
     font-weight: 600;
@@ -123,5 +125,5 @@
 }
 
 .inviteBtn:hover {
-    background: #1f2937 !important;
+    opacity: 0.9;
 }

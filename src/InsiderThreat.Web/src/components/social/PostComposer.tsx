@@ -26,11 +26,14 @@ const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            const newSelectedFiles: SelectedFile[] = files.map(file => ({
-                file,
-                preview: URL.createObjectURL(file),
-                type: (file.type.startsWith('video/') ? 'video' : 'image') as 'image' | 'video'
-            }));
+            const newSelectedFiles: SelectedFile[] = files.map(file => {
+                const type: 'image' | 'video' = file.type.startsWith('video/') ? 'video' : 'image';
+                return {
+                    file,
+                    preview: URL.createObjectURL(file),
+                    type
+                };
+            });
             setSelectedFiles([...selectedFiles, ...newSelectedFiles]);
         }
     };

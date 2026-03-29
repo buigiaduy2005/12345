@@ -2,10 +2,10 @@
 .synchro-dashboard-wrapper {
     padding: 24px;
     font-family: 'Inter', sans-serif;
-    color: #111827;
+    color: var(--color-text-main);
     height: 100%;
     overflow-y: auto;
-    background: #f9fafb;
+    background: var(--color-bg);
 }
 
 .dashboard-header-block {
@@ -24,8 +24,8 @@
 }
 
 .stat-card {
-    background: #ffffff;
-    border: 1px solid #f3f4f6;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
     padding: 20px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.02);
@@ -55,8 +55,8 @@
 
 /* Panels */
 .chart-panel, .recent-activity-panel, .widget-panel {
-    background: #ffffff;
-    border: 1px solid #f3f4f6;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
     border-radius: 16px;
     padding: 20px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.02);
@@ -80,7 +80,7 @@
     grid-template-columns: 2fr 1fr 1fr;
     align-items: center;
     padding: 12px 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--color-border);
     cursor: pointer;
     transition: background 0.2s;
 }
@@ -90,7 +90,7 @@
 }
 
 .recent-task-row:hover {
-    background: #f9fafb;
+    background: var(--color-bg);
 }
 
 .task-title-cell {
@@ -118,8 +118,8 @@
 }
 
 .today-task-card {
-    background: #f9fafb;
-    border: 1px solid #f3f4f6;
+    background: var(--color-surface-lighter);
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 16px;
     cursor: pointer;
@@ -127,7 +127,7 @@
 }
 
 .today-task-card:hover {
-    border-color: #d1d5db;
+    border-color: var(--color-text-muted);
 }
 
 .tt-header {
@@ -139,7 +139,7 @@
 
 .tt-title {
     font-size: 14px;
-    color: #111827;
+    color: var(--color-text-main);
 }
 
 .tt-meta {
@@ -155,8 +155,13 @@
     font-weight: 600;
 }
 
-.status-pill.todo { background: #f3f4f6; color: #4b5563; }
+.status-pill.todo { background: var(--color-bg); color: var(--color-text-muted); }
 .status-pill.in-progress { background: #e0e7ff; color: #4338ca; }
 .status-pill.in-review { background: #fef3c7; color: #b45309; }
 .status-pill.waiting-approval { background: #ffedd5; color: #c2410c; }
 .status-pill.done { background: #d1fae5; color: #047857; }
+
+:global(.dark) .status-pill.in-progress { background: rgba(67, 56, 202, 0.2); }
+:global(.dark) .status-pill.in-review { background: rgba(180, 83, 9, 0.2); }
+:global(.dark) .status-pill.waiting-approval { background: rgba(194, 65, 12, 0.2); }
+:global(.dark) .status-pill.done { background: rgba(4, 120, 87, 0.2); }

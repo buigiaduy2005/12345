@@ -8,10 +8,11 @@ import styles from './SynchroHeader.module.css';
 
 interface SynchroHeaderProps {
     breadcrumb: { label: string; active?: boolean }[];
-    members?: any[];
+    members?: { id: string; fullName: string; username: string; avatarUrl: string }[];
+    onInviteClick?: () => void;
 }
 
-export default function SynchroHeader({ breadcrumb, members = [] }: SynchroHeaderProps) {
+export default function SynchroHeader({ breadcrumb, members = [], onInviteClick }: SynchroHeaderProps) {
     return (
         <header className={styles.header}>
             <div className={styles.breadcrumbWrapper}>
@@ -43,15 +44,23 @@ export default function SynchroHeader({ breadcrumb, members = [] }: SynchroHeade
                 <div className={styles.divider} />
 
                 <Space size={16} className={styles.membersSection}>
-                    <Avatar.Group maxCount={3} size={32} className={styles.avatarGroup}>
-                        <Avatar src="https://i.pravatar.cc/150?u=1" />
-                        <Avatar src="https://i.pravatar.cc/150?u=2" />
-                        <Avatar src="https://i.pravatar.cc/150?u=3" />
-                        <Avatar src="https://i.pravatar.cc/150?u=4" />
-                        <Avatar src="https://i.pravatar.cc/150?u=5" />
-                    </Avatar.Group>
+                    {members.length > 0 ? (
+                        <Avatar.Group maxCount={3} size={32} className={styles.avatarGroup}>
+                            {members.map(member => (
+                                <Avatar key={member.id} src={member.avatarUrl || `https://ui-avatars.com/api/?name=${member.username}`}>
+                                    {member.fullName?.charAt(0) || member.username?.charAt(0)}
+                                </Avatar>
+                            ))}
+                        </Avatar.Group>
+                    ) : (
+                        <Avatar.Group maxCount={3} size={32} className={styles.avatarGroup}>
+                            <Avatar src="https://i.pravatar.cc/150?u=1" />
+                            <Avatar src="https://i.pravatar.cc/150?u=2" />
+                            <Avatar src="https://i.pravatar.cc/150?u=3" />
+                        </Avatar.Group>
+                    )}
                     
-                    <Button type="primary" icon={<UserAddOutlined />} className={styles.inviteBtn}>
+                    <Button type="primary" icon={<UserAddOutlined />} className={styles.inviteBtn} onClick={onInviteClick}>
                         Invite
                     </Button>
                     

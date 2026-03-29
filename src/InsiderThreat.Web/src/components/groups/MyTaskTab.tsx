@@ -33,12 +33,12 @@ interface Column {
     dotColor: string;
 }
 
-const COLUMNS: Column[] = [
-    { id: 'Todo', label: 'To-do', color: '#8b949e', dotColor: '#8b949e' },
-    { id: 'InProgress', label: 'In Progress', color: '#1890ff', dotColor: '#4338ca' },
-    { id: 'InReview', label: 'In Review', color: '#faad14', dotColor: '#b45309' },
-    { id: 'WaitingApproval', label: 'Chờ duyệt', color: '#f97316', dotColor: '#c2410c' },
-    { id: 'Done', label: 'Completed', color: '#52c41a', dotColor: '#047857' }
+const COLUMNS: (t: any) => Column[] = (t) => [
+    { id: 'Todo', label: t('project_detail.task_drawer.status_todo'), color: '#8b949e', dotColor: '#8b949e' },
+    { id: 'InProgress', label: t('project_detail.task_drawer.status_in_progress'), color: '#1890ff', dotColor: '#4338ca' },
+    { id: 'InReview', label: t('project_detail.task_drawer.status_review'), color: '#faad14', dotColor: '#b45309' },
+    { id: 'WaitingApproval', label: t('project_detail.task_drawer.status_waiting'), color: '#f97316', dotColor: '#c2410c' },
+    { id: 'Done', label: t('project_detail.task_drawer.status_done'), color: '#52c41a', dotColor: '#047857' }
 ];
 
 interface Member {
@@ -62,6 +62,8 @@ export default function MyTaskTab() {
     const [initialStatus, setInitialStatus] = useState<string | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState('');
 
+    const columns = useMemo(() => COLUMNS(t), [t]);
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -72,7 +74,7 @@ export default function MyTaskTab() {
             setTasks(tasksRes);
             setMembers(membersRes);
         } catch (err) {
-            message.error('Không thể tải danh sách công việc');
+            message.error(t('project_detail.mytasks.load_fail', { defaultValue: 'Không thể tải danh sách công việc' }));
         } finally {
             setLoading(false);
         }
@@ -99,10 +101,10 @@ export default function MyTaskTab() {
 
         try {
             await api.patch(`/api/groups/${groupId}/tasks/${draggableId}`, { status: targetStatus });
-            message.success(`Đã chuyển sang ${targetStatus}`);
+            message.success(t('project_detail.mytasks.move_success', { status: t(`project_detail.task_drawer.status_${targetStatus.toLowerCase()}`), defaultValue: `Đã chuyển sang ${targetStatus}` }));
         } catch (err) {
             setTasks(originalTasks);
-            message.error('Không thể cập nhật trạng thái');
+            message.error(t('project_detail.mytasks.update_status_fail', { defaultValue: 'Không thể cập nhật trạng thái' }));
         }
     };
 
@@ -112,18 +114,18 @@ export default function MyTaskTab() {
 
     const handleDeleteTask = (taskId: string) => {
         Modal.confirm({
-            title: 'Xóa nhiệm vụ?',
-            content: 'Hành động này không thể hoàn tác.',
-            okText: 'Xóa',
+            title: t('project_detail.mytasks.delete_confirm_title', { defaultValue: 'Xóa nhiệm vụ?' }),
+            content: t('project_detail.mytasks.delete_confirm_msg', { defaultValue: 'Hành động này không thể hoàn tác.' }),
+            okText: t('project_detail.mytasks.btn_delete', { defaultValue: 'Xóa' }),
             okType: 'danger',
-            cancelText: 'Hủy',
+            cancelText: t('project_detail.dashboard.btn_cancel', { defaultValue: 'Hủy' }),
             onOk: async () => {
                 try {
                     await api.delete(`/api/groups/${groupId}/tasks/${taskId}`);
-                    message.success('Đã xóa task');
+                    message.success(t('project_detail.mytasks.delete_success', { defaultValue: 'Đã xóa task' }));
                     fetchData();
                 } catch (err) {
-                    message.error('Lỗi khi xóa task');
+                    message.error(t('project_detail.mytasks.delete_fail', { defaultValue: 'Lỗi khi xóa task' }));
                 }
             }
         });
@@ -142,13 +144,13 @@ export default function MyTaskTab() {
             {/* Design Header */}
             <div className="myTask-topBar">
                 <div className="topBar-left">
-                    <span className="task-project-label">PROJECT WORKFLOW</span>
-                    <h2 className="task-project-title">Bảng công việc</h2>
+                    <span className="task-project-label">{t('project_detail.mytasks.narrative')}</span>
+                    <h2 className="task-project-title">{t('project_detail.mytasks.board_title', { defaultValue: 'Bảng công việc' })}</h2>
                 </div>
                 <div className="topBar-right">
                     <Input 
                         prefix={<SearchOutlined />} 
-                        placeholder="Tìm kiếm công việc..." 
+                        placeholder={t('project_detail.mytasks.search')} 
                         style={{ width: 240, borderRadius: 8 }}
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
@@ -160,14 +162,14 @@ export default function MyTaskTab() {
                             icon={<AppstoreOutlined />} 
                             onClick={() => setViewMode('kanban')}
                         >
-                            Bảng
+                            {t('project_detail.mytasks.board')}
                         </Button>
                         <Button 
                             type={viewMode === 'list' ? 'primary' : 'text'} 
                             icon={<UnorderedListOutlined />} 
                             onClick={() => setViewMode('list')}
                         >
-                            Danh sách
+                            {t('project_detail.mytasks.list')}
                         </Button>
                     </div>
 
@@ -180,7 +182,7 @@ export default function MyTaskTab() {
                             setShowCreateTask(true); 
                         }}
                     >
-                        Thêm Task
+                        {t('project_detail.mytasks.add_task')}
                     </Button>
                 </div>
             </div>
@@ -188,7 +190,7 @@ export default function MyTaskTab() {
             {/* Task Calendar (Timeline Bubble) */}
             <div className="task-timeline-wrapper animate-in">
                 <div className="timeline-header">
-                    <h3>Task Calendar</h3>
+                    <h3>{t('project_detail.mytasks.calendar_title', { defaultValue: 'Task Calendar' })}</h3>
                     <Button type="text" icon={<MoreOutlined />} />
                 </div>
                 <div className="timeline-container">
@@ -226,13 +228,13 @@ export default function MyTaskTab() {
                 </div>
             </div>
 
-            <h3 className="all-tasks-header">All Task</h3>
+            <h3 className="all-tasks-header">{t('project_detail.mytasks.all_tasks_label', { defaultValue: 'All Task' })}</h3>
 
             {/* Kanban Board with DND */}
             {viewMode === 'kanban' && (
                 <DragDropContext onDragEnd={onDragEnd}>
                     <div className="kanbanBoard">
-                        {COLUMNS.map(col => (
+                        {columns.map(col => (
                             <Droppable key={col.id} droppableId={col.id}>
                                 {(provided, snapshot) => (
                                     <div
@@ -322,7 +324,7 @@ export default function MyTaskTab() {
                                                                         )}
                                                                     </div>
                                                                     <div className="kCard-actions">
-                                                                        <Tooltip title="Tiến độ">
+                                                                        <Tooltip title={t('project_detail.mytasks.progress_tooltip', { defaultValue: 'Tiến độ' })}>
                                                                            <Tag color="cyan">{task.progress}%</Tag>
                                                                         </Tooltip>
                                                                     </div>
@@ -345,18 +347,18 @@ export default function MyTaskTab() {
             {viewMode === 'list' && (
                 <div className="listView modern-list animate-in">
                     <div className="list-header">
-                        <div className="list-col">Công việc</div>
-                        <div className="list-col">Trạng thái</div>
-                        <div className="list-col">Người làm</div>
-                        <div className="list-col">Hạn chót</div>
-                        <div className="list-col">Độ ưu tiên</div>
-                        <div className="list-col" style={{ width: 80 }}>Thao tác</div>
+                        <div className="list-col" style={{ flex: 2 }}>{t('project_detail.mytasks.col_task', { defaultValue: 'Công việc' })}</div>
+                        <div className="list-col">{t('project_detail.task_drawer.status')}</div>
+                        <div className="list-col">{t('project_detail.task_drawer.assignee')}</div>
+                        <div className="list-col">{t('project_detail.task_drawer.due_date')}</div>
+                        <div className="list-col">{t('project_detail.task_drawer.priority')}</div>
+                        <div className="list-col" style={{ width: 80 }}>{t('docs.col_action', { defaultValue: 'Thao tác' })}</div>
                     </div>
                     {filteredTasks.map(t => (
                         <div key={t.id} className="list-row" onClick={() => { setSelectedTask(t); setShowDrawer(true); }}>
                             <div className="list-col title">{t.title}</div>
                             <div className="list-col">
-                                <Tag color={COLUMNS.find(c => c.id === t.status)?.dotColor}>{t.status}</Tag>
+                                <Tag color={columns.find((c: any) => c.id === t.status)?.dotColor}>{t.status}</Tag>
                             </div>
                             <div className="list-col">
                                 <Space>
@@ -388,7 +390,7 @@ export default function MyTaskTab() {
                             </div>
                         </div>
                     ))}
-                    {filteredTasks.length === 0 && <Empty description="Không tìm thấy công việc" />}
+                    {filteredTasks.length === 0 && <Empty description={t('project_detail.mytasks.no_task_found', { defaultValue: 'Không tìm thấy công việc' })} />}
                 </div>
             )}
 

@@ -57,6 +57,9 @@ export const api = {
     put: <T>(url: string, data?: any, config?: any) => apiClient.put<T>(url, data, config).then((res) => res.data),
     patch: <T>(url: string, data?: any, config?: any) => apiClient.patch<T>(url, data, config).then((res) => res.data),
     delete: <T>(url: string) => apiClient.delete<T>(url).then((res) => res.data),
+    postForm: <T>(url: string, data: FormData) => apiClient.post<T>(url, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }).then((res) => res.data),
 };
 
 export default api;

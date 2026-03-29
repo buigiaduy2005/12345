@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { authService } from '../services/auth';
 import { attendanceService } from '../services/attendanceService';
 import { useTheme } from '../context/ThemeContext';
+import ThemeToggle from './ThemeToggle';
+import LanguageToggle from './LanguageToggle';
 import styles from './LeftSidebar.module.css';
 
 interface LeftSidebarProps {
@@ -36,7 +38,8 @@ export default function LeftSidebar({ defaultCollapsed = false }: LeftSidebarPro
         { icon: 'mail', label: t('nav.inbox', 'Inbox'), path: '/inbox', badge: 5 },
         { icon: 'people', label: t('nav.staff', 'Nhân sự'), path: '/staff' },
         { icon: 'folder_shared', label: t('nav.library', 'Kho tài liệu'), path: '/library' },
-        { icon: 'groups', label: t('nav.groups', 'Dự án & Nhóm'), path: '/groups' },
+        { icon: 'rocket_launch', label: t('nav.projects', 'Dự án'), path: '/projects' },
+        { icon: 'groups', label: t('nav.groups', 'Cộng đồng'), path: '/groups' },
         { icon: 'videocam', label: t('nav.meet', 'Họp trực tuyến'), path: '/meet' },
         { icon: 'event_available', label: t('nav.attendance', 'Chấm công'), path: '/attendance', special: true },
         ...(isAdmin ? [{ icon: 'security', label: t('nav.monitor_logs', 'Agent System'), path: '/monitor-logs' }] : []),
@@ -83,11 +86,11 @@ export default function LeftSidebar({ defaultCollapsed = false }: LeftSidebarPro
                 </button>
             </div>
 
-            {/* Create Task Button */}
+            {/* Create Project Button */}
             <div className={styles.createTaskWrapper}>
-                <button className={styles.createTaskBtn} onClick={() => navigate('/groups')}>
+                <button className={styles.createTaskBtn} onClick={() => navigate('/projects')}>
                     <span className="material-symbols-outlined">add</span>
-                    {!isCollapsed && <span>Create Task</span>}
+                    {!isCollapsed && <span>Tạo Dự Án</span>}
                 </button>
             </div>
 
@@ -131,12 +134,37 @@ export default function LeftSidebar({ defaultCollapsed = false }: LeftSidebarPro
                 </div>
             </nav>
 
-            {/* Help Center & Logout */}
+            {/* Settings & Help Center & Logout */}
             <div className={styles.sidebarFooter}>
-                <button className={styles.footerBtn}>
-                    {!isCollapsed && <span>Help Center</span>}
-                    <span className="material-symbols-outlined">help</span>
-                </button>
+                <div className={styles.settingsRow}>
+                    <div className={styles.settingsItem}>
+                        <ThemeToggle />
+                        {!isCollapsed && <span className={styles.settingsLabel}>{t('nav.theme', 'Giao diện')}</span>}
+                    </div>
+                    <div className={styles.settingsItem}>
+                        <LanguageToggle />
+                        {!isCollapsed && <span className={styles.settingsLabel}>{t('nav.language', 'Ngôn ngữ')}</span>}
+                    </div>
+                </div>
+
+                <div className={styles.footerActions}>
+                    <button className={styles.footerBtn}>
+                        {!isCollapsed && <span>Help Center</span>}
+                        <span className="material-symbols-outlined">help</span>
+                    </button>
+                    <button 
+                        className={`${styles.footerBtn} ${styles.logoutBtn}`}
+                        onClick={() => {
+                            if (window.confirm(t('nav.logout_confirm', 'Bạn có chắc chắn muốn đăng xuất?'))) {
+                                authService.logout();
+                                navigate('/login');
+                            }
+                        }}
+                    >
+                        {!isCollapsed && <span>{t('nav.logout', 'Đăng xuất')}</span>}
+                        <span className="material-symbols-outlined">logout</span>
+                    </button>
+                </div>
             </div>
         </aside>
     );

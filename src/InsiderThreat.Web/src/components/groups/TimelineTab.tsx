@@ -55,7 +55,7 @@ export default function TimelineTab() {
             phases.forEach(p => initialExpanded[p] = true);
             setExpandedPhases(initialExpanded);
         } catch (err) {
-            message.error('Lỗi khi tải dữ liệu lộ trình');
+            message.error(t('project_detail.timeline.load_fail', { defaultValue: 'Lỗi khi tải dữ liệu lộ trình' }));
         } finally {
             setLoading(false);
         }
@@ -75,17 +75,17 @@ export default function TimelineTab() {
                 projectStartDate: values.range[0].toISOString(),
                 projectEndDate: values.range[1].toISOString()
             });
-            message.success('Cập nhật lộ trình dự án thành công');
+            message.success(t('project_detail.timeline.update_success', { defaultValue: 'Cập nhật lộ trình dự án thành công' }));
             setIsScheduleModalVisible(false);
             fetchData();
         } catch (err) {
-            message.error('Lỗi khi cập nhật lộ trình');
+            message.error(t('project_detail.timeline.update_fail', { defaultValue: 'Lỗi khi cập nhật lộ trình' }));
         }
     };
 
     const handleExport = () => {
-        message.loading('Đang chuẩn bị dữ liệu xuất bản...', 1.5).then(() => {
-            message.success('Đã xuất bản lộ trình dự án (PDF/CSV)');
+        message.loading(t('project_detail.timeline.exporting', { defaultValue: 'Đang chuẩn bị dữ liệu xuất bản...' }), 1.5).then(() => {
+            message.success(t('project_detail.timeline.export_success', { defaultValue: 'Đã xuất bản lộ trình dự án (PDF/CSV)' }));
         });
     };
 
@@ -180,18 +180,18 @@ export default function TimelineTab() {
             <div className="timeline-header">
                 <div className="header-info">
                     <Tag color="blue" className="glass-tag">Q3 Roadmap</Tag>
-                    <h2 className="timeline-title">Lộ trình và Kế hoạch Dự án</h2>
+                    <h2 className="timeline-title">{t('project_detail.timeline.title')}</h2>
                 </div>
                 <div className="timeline-actions">
                     <Input 
-                        placeholder="Tìm nhiệm vụ..." 
+                        placeholder={t('project_detail.mytasks.search')} 
                         prefix={<FilterOutlined />} 
                         style={{ width: 200, marginRight: 8 }}
                         value={filterText}
                         onChange={e => setFilterText(e.target.value)}
                     />
-                    <Button icon={<SendOutlined />} onClick={handleExport}>Xuất bản</Button>
-                    <Button type="primary" icon={<CalendarOutlined />} onClick={() => setIsScheduleModalVisible(true)}>Lập lịch</Button>
+                    <Button icon={<SendOutlined />} onClick={handleExport}>{t('project_detail.timeline.btn_export', { defaultValue: 'Xuất bản' })}</Button>
+                    <Button type="primary" icon={<CalendarOutlined />} onClick={() => setIsScheduleModalVisible(true)}>{t('project_detail.timeline.btn_schedule', { defaultValue: 'Lập lịch' })}</Button>
                 </div>
             </div>
 
@@ -199,7 +199,7 @@ export default function TimelineTab() {
                 <div className="timeline-body-wrapper">
                     {/* Left Panel: Phases & Tasks */}
                     <div className="tl-left-panel">
-                        <div className="tl-col-heading">NHIỆM VỤ DỰ ÁN</div>
+                        <div className="tl-col-heading">{t('project_detail.timeline.col_tasks', { defaultValue: 'NHIỆM VỤ DỰ ÁN' })}</div>
                         {Object.entries(tasksByPhase).map(([phase, phaseTasks]) => (
                             <div key={phase} className="tl-phase-group">
                                 <div className="tl-phase-header" onClick={() => togglePhase(phase)}>
@@ -253,13 +253,13 @@ export default function TimelineTab() {
 
             {/* Bottom Milestones */}
             <div className="tl-milestones-footer">
-                <h3 className="footer-title">Cột mốc quan trọng</h3>
+                <h3 className="footer-title">{t('project_detail.timeline.milestones_title', { defaultValue: 'Cột mốc quan trọng' })}</h3>
                 <div className="milestone-grid">
                     {[
-                        { name: 'Khởi động dự án', date: timelineScale.start.format('DD MMM'), done: true },
-                        { name: 'Thiết kế hệ thống', date: timelineScale.start.add(2, 'week').format('DD MMM'), done: tasks.some(t => t.status === 'Done') },
-                        { name: 'Triển khai Beta', date: timelineScale.end.subtract(2, 'week').format('DD MMM'), done: false },
-                        { name: 'Hoàn thành', date: timelineScale.end.format('DD MMM'), done: false },
+                        { name: t('project_detail.timeline.milestone_kickoff', { defaultValue: 'Khởi động dự án' }), date: timelineScale.start.format('DD MMM'), done: true },
+                        { name: t('project_detail.timeline.milestone_design', { defaultValue: 'Thiết kế hệ thống' }), date: timelineScale.start.add(2, 'week').format('DD MMM'), done: tasks.some(t => t.status === 'Done') },
+                        { name: t('project_detail.timeline.milestone_beta', { defaultValue: 'Triển khai Beta' }), date: timelineScale.end.subtract(2, 'week').format('DD MMM'), done: false },
+                        { name: t('project_detail.timeline.milestone_finish', { defaultValue: 'Hoàn thành' }), date: timelineScale.end.format('DD MMM'), done: false },
                     ].map((m, i) => (
                         <div key={i} className={`milestone-card ${m.done ? 'is-done' : ''}`}>
                             <CheckCircleOutlined className="m-icon" />
@@ -273,12 +273,12 @@ export default function TimelineTab() {
             </div>
 
             <Modal
-                title="Cấu hình Lộ trình Dự án"
+                title={t('project_detail.timeline.schedule_modal_title', { defaultValue: 'Cấu hình Lộ trình Dự án' })}
                 open={isScheduleModalVisible}
                 onCancel={() => setIsScheduleModalVisible(false)}
                 onOk={() => scheduleForm.submit()}
-                okText="Cập nhật"
-                cancelText="Hủy"
+                okText={t('project_detail.task_drawer.save')}
+                cancelText={t('project_detail.dashboard.btn_cancel')}
             >
                 <Form
                     form={scheduleForm}
@@ -289,8 +289,8 @@ export default function TimelineTab() {
                             [dayjs(group.projectStartDate), dayjs(group.projectEndDate)] : []
                     }}
                 >
-                    <p>Chọn khoảng thời gian tổng thể của dự án để căn chỉnh biểu đồ Gantt.</p>
-                    <Form.Item name="range" label="Thời gian dự án" rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}>
+                    <p>{t('project_detail.timeline.schedule_desc', { defaultValue: 'Chọn khoảng thời gian tổng thể của dự án để căn chỉnh biểu đồ Gantt.' })}</p>
+                    <Form.Item name="range" label={t('project_detail.timeline.project_range', { defaultValue: 'Thời gian dự án' })} rules={[{ required: true, message: t('attendance.placeholder_network') }]}>
                         <DatePicker.RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
                     </Form.Item>
                 </Form>

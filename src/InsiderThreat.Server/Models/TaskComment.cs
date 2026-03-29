@@ -20,6 +20,15 @@ namespace InsiderThreat.Server.Models
         [BsonElement("content")]
         public string Content { get; set; } = string.Empty;
 
+        [BsonElement("attachmentUrl")]
+        public string? AttachmentUrl { get; set; }
+
+        [BsonElement("attachmentName")]
+        public string? AttachmentName { get; set; }
+
+        [BsonElement("attachmentSize")]
+        public long? AttachmentSize { get; set; }
+
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

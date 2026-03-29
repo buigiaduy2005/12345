@@ -22,6 +22,8 @@ import SocialAttendancePage from './pages/SocialAttendancePage';
 import MeetPage from './pages/MeetPage';
 import MonitorLogsPage from './pages/MonitorLogsPage';
 import SecurityApprovalsPage from './pages/SecurityApprovalsPage';
+import ProjectsPage from './pages/ProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 import { NotificationProvider } from './contexts/NotificationContext';
 import NotificationToast from './components/NotificationToast';
 import { ChatWidget } from './components/ChatWidget';
@@ -98,6 +100,8 @@ function App() {
               <Route path="/staff" element={<PrivateRoute><StaffPage /></PrivateRoute>} />
               <Route path="/groups" element={<PrivateRoute><GroupsPage /></PrivateRoute>} />
               <Route path="/groups/:id" element={<PrivateRoute><GroupDetailPage /></PrivateRoute>} />
+              <Route path="/projects" element={<PrivateRoute><ProjectsPage /></PrivateRoute>} />
+              <Route path="/projects/:id" element={<PrivateRoute><ProjectDetailPage /></PrivateRoute>} />
               <Route path="/inbox" element={<PrivateRoute><InboxPage /></PrivateRoute>} />
               <Route path="/library" element={<PrivateRoute><LibraryPage /></PrivateRoute>} />
               <Route path="/attendance" element={<PrivateRoute><SocialAttendancePage /></PrivateRoute>} />

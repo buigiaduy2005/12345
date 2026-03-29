@@ -65,13 +65,25 @@ namespace InsiderThreat.Server.Controllers
 
         // GET: api/Groups
         [HttpGet]
-        public async Task<IActionResult> GetGroups()
+        public async Task<IActionResult> GetGroups([FromQuery] bool? isProject)
         {
             try
             {
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                
+                var filterBuilder = Builders<Group>.Filter;
+                var filter = filterBuilder.Or(
+                    filterBuilder.Where(g => g.MemberIds.Contains(userId!)),
+                    filterBuilder.Where(g => g.Privacy.ToLower() == "public")
+                );
+
+                if (isProject.HasValue)
+                {
+                    filter = filterBuilder.And(filter, filterBuilder.Eq(g => g.IsProject, isProject.Value));
+                }
+
                 var groups = await _groups
-                    .Find(g => g.MemberIds.Contains(userId!) || g.Privacy.ToLower() == "public")
+                    .Find(filter)
                     .SortBy(g => g.Name)
                     .ToListAsync();
                 return Ok(groups);
@@ -341,6 +353,9 @@ namespace InsiderThreat.Server.Controllers
                     c.Id,
                     c.TaskId,
                     c.Content,
+                    c.AttachmentUrl,
+                    c.AttachmentName,
+                    c.AttachmentSize,
                     c.CreatedAt,
                     User = new {
                         Id = u?.Id,
@@ -363,7 +378,10 @@ namespace InsiderThreat.Server.Controllers
             {
                 TaskId = taskId,
                 UserId = userId,
-                Content = req.Content
+                Content = req.Content,
+                AttachmentUrl = req.AttachmentUrl,
+                AttachmentName = req.AttachmentName,
+                AttachmentSize = req.AttachmentSize
             };
             await _taskComments.InsertOneAsync(comment);
 
@@ -386,6 +404,9 @@ namespace InsiderThreat.Server.Controllers
                 comment.Id,
                 comment.TaskId,
                 comment.Content,
+                comment.AttachmentUrl,
+                comment.AttachmentName,
+                comment.AttachmentSize,
                 comment.CreatedAt,
                 User = new {
                     Id = u?.Id,
@@ -395,7 +416,30 @@ namespace InsiderThreat.Server.Controllers
             });
         }
 
-        [HttpGet("{id}/analytics/daily-progress")]
+        [HttpPost("{id}/tasks/{taskId}/comments/upload")]
+        public async Task<IActionResult> UploadCommentAttachment(string id, string taskId, IFormFile file)
+        {
+            if (file == null || file.Length == 0) return BadRequest("File is empty");
+
+            try
+            {
+                var fileId = await _gridFS.UploadFromStreamAsync(file.FileName, file.OpenReadStream());
+                var fileUrl = $"/api/documents/download/{fileId}"; // Assuming an existing download endpoint or I'll add one
+
+                return Ok(new
+                {
+                    url = fileUrl,
+                    name = file.FileName,
+                    size = file.Length,
+                    fileId = fileId.ToString()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading comment attachment");
+                return StatusCode(500, "Internal server error during upload");
+            }
+        }
         public async Task<IActionResult> GetDailyAnalytics(string id)
         {
             // Fetch all tasks for the group that are completed
@@ -479,6 +523,9 @@ namespace InsiderThreat.Server.Controllers
     public class CreateTaskCommentReq
     {
         public string Content { get; set; } = string.Empty;
+        public string? AttachmentUrl { get; set; }
+        public string? AttachmentName { get; set; }
+        public long? AttachmentSize { get; set; }
     }
 
     public class CreateGroupRequest

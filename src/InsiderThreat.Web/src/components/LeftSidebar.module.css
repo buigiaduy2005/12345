@@ -3,8 +3,8 @@
     width: 260px;
     min-width: 260px;
     height: calc(100vh - var(--header-height));
-    background: #ffffff;
-    border-right: 1px solid #f3f4f6;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
     display: none;
     flex-direction: column;
     position: sticky;
@@ -47,19 +47,19 @@
 .userName {
     font-weight: 700;
     font-size: 15px;
-    color: #111827;
+    color: var(--color-text-main);
 }
 
 .userEmail {
     font-size: 12px;
-    color: #6b7280;
+    color: var(--color-text-muted);
 }
 
 .toggleCollapseBtn {
     background: transparent;
     border: none;
     cursor: pointer;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -68,8 +68,8 @@
 }
 
 .toggleCollapseBtn:hover {
-    color: #111827;
-    background: #f3f4f6;
+    color: var(--color-text-main);
+    background: var(--color-bg);
 }
 
 /* Create Task Button */
@@ -83,8 +83,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: #111827;
-    color: #ffffff;
+    background: var(--color-text-main); /* Usually black in light, white in dark if logic applies */
+    color: var(--color-surface);
     border: none;
     padding: 12px;
     border-radius: 12px;
@@ -95,7 +95,7 @@
 }
 
 .createTaskBtn:hover {
-    background: #1f2937;
+    opacity: 0.9;
 }
 
 /* Main Navigation */
@@ -105,7 +105,7 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    margin-right: -8px; /* padding compensation for scrollbar */
+    margin-right: -8px; 
     padding-right: 8px;
 }
 
@@ -123,7 +123,7 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    color: #4b5563;
+    color: var(--color-text-muted);
     font-size: 14px;
     font-weight: 500;
     text-align: left;
@@ -137,13 +137,13 @@
 }
 
 .navItem:hover {
-    background: #f9fafb;
-    color: #111827;
+    background: var(--color-bg);
+    color: var(--color-text-main);
 }
 
 .navItem.active {
-    background: #f3f4f6;
-    color: #111827;
+    background: var(--color-bg);
+    color: var(--color-text-main);
     font-weight: 600;
 }
 
@@ -162,12 +162,13 @@
 }
 
 .navBadge {
-    background: #e5e7eb;
-    color: #374151;
+    background: var(--color-bg);
+    color: var(--color-text-muted);
     font-size: 12px;
     font-weight: 600;
     padding: 2px 8px;
     border-radius: 12px;
+    border: 1px solid var(--color-border);
 }
 
 /* Favourite Section */
@@ -176,7 +177,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 12px 8px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 13px;
     font-weight: 600;
     margin-top: 12px;
@@ -190,17 +191,44 @@
 
 .favouriteItem {
     padding: 8px 12px;
-    color: #4b5563;
+    color: var(--color-text-muted);
 }
 
 .favouriteItem .navIcon {
     font-size: 18px;
 }
 
-/* Footer (Help Center) */
+/* Footer (Help Center & Settings) */
 .sidebarFooter {
     margin-top: auto;
     padding-top: 16px;
+    border-top: 1px solid var(--color-border);
+}
+
+.settingsRow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 12px;
+    margin-bottom: 16px;
+}
+
+.settingsItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settingsLabel {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.footerActions {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .footerBtn {
@@ -211,18 +239,42 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    color: #4b5563;
+    color: var(--color-text-muted);
     font-weight: 600;
     font-size: 14px;
-    padding: 12px;
-    transition: color 0.2s;
+    padding: 10px 12px;
+    transition: all 0.2s;
+    border-radius: 8px;
 }
 
 .footerBtn:hover {
-    color: #111827;
+    color: var(--color-text-main);
+    background: var(--color-bg);
+}
+
+.logoutBtn {
+    color: #ef4444 !important;
+}
+
+.logoutBtn:hover {
+    background: #fef2f2 !important;
+}
+
+:global(.dark) .logoutBtn:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
 }
 
 .sidebar.collapsed .footerBtn {
     justify-content: center;
     padding: 12px 0;
+}
+
+.sidebar.collapsed .settingsRow {
+    align-items: center;
+    padding: 0;
+}
+
+.sidebar.collapsed .settingsItem {
+    justify-content: center;
+    width: 100%;
 }

@@ -44,7 +44,11 @@ interface GroupInfo {
     adminIds?: string[];
 }
 
-export default function GroupDashboardTab() {
+interface GroupDashboardTabProps {
+    onInviteClick?: () => void;
+}
+
+export default function GroupDashboardTab({ onInviteClick }: GroupDashboardTabProps = {}) {
     const { id: groupId } = useParams<{ id: string }>();
     const { t } = useTranslation();
     const { message } = App.useApp();
@@ -96,7 +100,7 @@ export default function GroupDashboardTab() {
                 deadline: values.deadline?.toISOString()
             };
             await api.post(`/api/groups/${groupId}/tasks`, taskData);
-            message.success('Đã tạo nhiệm vụ');
+            message.success(t('project_detail.mytasks.add_success', { defaultValue: 'Đã tạo nhiệm vụ' }));
             setIsTaskModalVisible(false);
             taskForm.resetFields();
             fetchData();
@@ -141,20 +145,20 @@ export default function GroupDashboardTab() {
         { label: 'Sun', value: 2 }
     ];
 
-    if (loading) return <div className="loading-state">Loading dashboard...</div>;
+    if (loading) return <div className="loading-state">{t('library.loading')}</div>;
 
     return (
         <div className="synchro-dashboard-wrapper">
             
             <div className="dashboard-header-block">
                 <div>
-                    <Title level={4} style={{ margin: 0 }}>Overview</Title>
-                    <Text type="secondary">Track your project progression here.</Text>
+                    <Title level={4} style={{ margin: 0 }}>{t('project_detail.dashboard.overview')}</Title>
+                    <Text type="secondary">{t('project_detail.dashboard.overview_subtitle')}</Text>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                    <Button icon={<TeamOutlined />}>Invite</Button>
+                    <Button icon={<TeamOutlined />} onClick={onInviteClick}>{t('project_detail.team.invite')}</Button>
                     <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsTaskModalVisible(true)}>
-                        Create Task
+                        {t('project_detail.dashboard.create_task')}
                     </Button>
                 </div>
             </div>
@@ -162,22 +166,22 @@ export default function GroupDashboardTab() {
             {/* Top Stat Cards */}
             <div className="stats-grid">
                 <div className="stat-card">
-                    <Text type="secondary">Total projects</Text>
+                    <Text type="secondary">{t('project_detail.dashboard.total_projects')}</Text>
                     <Title level={2} style={{ margin: "4px 0" }}>1 (Current)</Title>
                     <Text type="success">+0%</Text>
                 </div>
                 <div className="stat-card">
-                    <Text type="secondary">Active tasks</Text>
+                    <Text type="secondary">{t('project_detail.dashboard.active_tasks')}</Text>
                     <Title level={2} style={{ margin: "4px 0" }}>{stats.totalTasks}</Title>
                     <Text type="success">+12%</Text>
                 </div>
                 <div className="stat-card">
-                    <Text type="secondary">Assigned to Me</Text>
+                    <Text type="secondary">{t('project_detail.dashboard.assigned_to_me')}</Text>
                     <Title level={2} style={{ margin: "4px 0" }}>{stats.assignedToMe}</Title>
                     <Text type="warning">Requires attention</Text>
                 </div>
                 <div className="stat-card">
-                    <Text type="secondary">Completed</Text>
+                    <Text type="secondary">{t('project_detail.dashboard.completed')}</Text>
                     <Title level={2} style={{ margin: "4px 0" }}>{stats.done}</Title>
                     <Text type="success">Good pacing</Text>
                 </div>
@@ -189,7 +193,7 @@ export default function GroupDashboardTab() {
                 <div className="dashboard-left-col">
                     <div className="chart-panel">
                         <div className="panel-header">
-                            <Title level={5} style={{ margin: 0 }}>Roadmap Map</Title>
+                            <Title level={5} style={{ margin: 0 }}>{t('project_detail.dashboard.roadmap')}</Title>
                             <Button type="text" icon={<EllipsisOutlined />} />
                         </div>
                         <div className="chart-container" style={{ height: 280 }}>
@@ -210,7 +214,7 @@ export default function GroupDashboardTab() {
 
                     <div className="recent-activity-panel">
                         <div className="panel-header">
-                            <Title level={5} style={{ margin: 0 }}>Recent Tasks Activity</Title>
+                            <Title level={5} style={{ margin: 0 }}>{t('project_detail.dashboard.recent_activity')}</Title>
                         </div>
                         <div className="recent-tasks-list">
                             {tasks.slice(0, 3).map(task => {
@@ -238,8 +242,8 @@ export default function GroupDashboardTab() {
                 <div className="dashboard-right-col">
                     <div className="widget-panel">
                         <div className="panel-header">
-                            <Title level={5} style={{ margin: 0 }}>Today Projects</Title>
-                            <a href="#">See all</a>
+                            <Title level={5} style={{ margin: 0 }}>{t('project_detail.dashboard.today_tasks')}</Title>
+                            <a href="#">{t('project_detail.dashboard.see_all')}</a>
                         </div>
                         <div className="today-tasks-list">
                             {tasks.filter(t => t.status !== 'Done').slice(0, 5).map(task => {
@@ -287,23 +291,23 @@ export default function GroupDashboardTab() {
 
             {/* Create Task Modal */}
             <Modal
-                title="Create New Task"
+                title={t('project_detail.dashboard.new_task_modal')}
                 open={isTaskModalVisible}
                 onCancel={() => setIsTaskModalVisible(false)}
                 footer={null}
                 destroyOnClose
             >
                 <Form form={taskForm} layout="vertical" onFinish={handleCreateTask}>
-                    <Form.Item name="title" label="Task Title" rules={[{ required: true }]}>
+                    <Form.Item name="title" label={t('project_detail.dashboard.task_title')} rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="description" label="Description">
+                    <Form.Item name="description" label={t('project_detail.dashboard.description')}>
                         <Input.TextArea rows={3} />
                     </Form.Item>
                     <Row gutter={16}>
                         <Col span={12}>
-                            <Form.Item name="assignedTo" label="Assign To">
-                                <Select placeholder="Select member" allowClear>
+                            <Form.Item name="assignedTo" label={t('project_detail.dashboard.assign_to')}>
+                                <Select placeholder={t('staff.search_placeholder')} allowClear>
                                     {members.map(m => (
                                         <Option key={m.id} value={m.id}>{m.fullName}</Option>
                                     ))}
@@ -311,7 +315,7 @@ export default function GroupDashboardTab() {
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="priority" label="Priority" initialValue="Medium">
+                            <Form.Item name="priority" label={t('project_detail.dashboard.priority')} initialValue="Medium">
                                 <Select>
                                     <Option value="Low">Low</Option>
                                     <Option value="Medium">Medium</Option>
@@ -322,20 +326,20 @@ export default function GroupDashboardTab() {
                     </Row>
                     <Row gutter={16}>
                         <Col span={12}>
-                            <Form.Item name="startDate" label="Start Date">
+                            <Form.Item name="startDate" label={t('project_detail.dashboard.start_date')}>
                                 <DatePicker style={{ width: '100%' }} />
                             </Form.Item>
                         </Col>
                         <Col span={12}>
-                            <Form.Item name="deadline" label="Due Date">
+                            <Form.Item name="deadline" label={t('project_detail.dashboard.due_date')}>
                                 <DatePicker style={{ width: '100%' }} showTime />
                             </Form.Item>
                         </Col>
                     </Row>
                     <Form.Item className="m-0 text-right">
                         <Space>
-                            <Button onClick={() => setIsTaskModalVisible(false)}>Cancel</Button>
-                            <Button type="primary" htmlType="submit">Create Task</Button>
+                            <Button onClick={() => setIsTaskModalVisible(false)}>{t('project_detail.dashboard.btn_cancel')}</Button>
+                            <Button type="primary" htmlType="submit">{t('project_detail.dashboard.create_task')}</Button>
                         </Space>
                     </Form.Item>
                 </Form>

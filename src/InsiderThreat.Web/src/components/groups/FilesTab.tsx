@@ -61,7 +61,7 @@ export default function FilesTab() {
             setFiles(filesRes);
             setMembers(membersRes);
         } catch (err) {
-            message.error('Không thể tải dữ liệu tệp tin');
+            message.error(t('project_detail.files.load_fail', { defaultValue: 'Không thể tải dữ liệu tệp tin' }));
         } finally {
             setLoading(false);
         }
@@ -74,19 +74,19 @@ export default function FilesTab() {
     const handleFileUpload = async (uploadFiles: File[]) => {
         if (uploadFiles.length === 0) return;
         setUploading(true);
-        const hide = message.loading('Đang tải lên...', 0);
+        const hide = message.loading(t('feed.posting', { defaultValue: 'Đang tải lên...' }), 0);
 
         try {
             for (const file of uploadFiles) {
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('description', `Dự án: ${file.name}`);
+                formData.append('description', `${t('project_detail.breadcrumbs.projects')}: ${file.name}`);
                 await api.post(`/api/groups/${groupId}/files`, formData);
             }
-            message.success('Tải lên thành công');
+            message.success(t('library.upload_success', { name: 'Files' }));
             fetchData();
         } catch (err) {
-            message.error('Lỗi khi tải lên tệp tin');
+            message.error(t('library.upload_fail', { name: 'Files', error: '' }));
         } finally {
             setUploading(false);
             hide();
@@ -132,13 +132,13 @@ export default function FilesTab() {
         <div className="filesTab animate-in">
             <div className="files-header">
                 <div className="header-info">
-                    <span className="section-label">TÀI LIỆU DỰ ÁN</span>
-                    <h2 className="files-title">Thư viện tệp tin <Tag className="count-tag">{files.length}</Tag></h2>
+                    <span className="section-label">{t('project_detail.files.resource_library')}</span>
+                    <h2 className="files-title">{t('project_detail.files.project_assets')} <Tag className="count-tag">{files.length}</Tag></h2>
                 </div>
                 <div className="files-header-actions">
                     <Input 
                         prefix={<SearchOutlined />} 
-                        placeholder="Tìm kiếm tệp tin..." 
+                        placeholder={t('project_detail.files.search')} 
                         style={{ width: 280, borderRadius: 10 }}
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
@@ -150,7 +150,7 @@ export default function FilesTab() {
                         onClick={() => inputRef.current?.click()}
                         className="upload-main-btn"
                     >
-                        Tải lên
+                        {t('project_detail.files.upload')}
                     </Button>
                     <input ref={inputRef} type="file" multiple hidden onChange={(e) => {
                         handleFileUpload(Array.from(e.target.files || []));
@@ -180,8 +180,8 @@ export default function FilesTab() {
                                 <CloudUploadOutlined />
                             </div>
                             <div className="drop-text">
-                                <h3>Kéo & thả tệp tin để tải lên</h3>
-                                <p>Hỗ trợ tải lên nhiều tệp cùng lúc, kích thước tối đa 50MB mỗi tệp</p>
+                                <h3>{t('project_detail.files.drop_zone')}</h3>
+                                <p>{t('library.dragger_hint')}</p>
                             </div>
                         </div>
                     </div>
@@ -221,7 +221,7 @@ export default function FilesTab() {
 
                     {filtered.length === 0 && (
                         <div className="empty-files-container">
-                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có tệp tin nào trong dự án này" />
+                            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('library.no_docs')} />
                         </div>
                     )}
                 </div>
@@ -229,7 +229,7 @@ export default function FilesTab() {
                 <div className="files-side-panel">
                     <div className="side-card storage-card">
                         <div className="side-card-header">
-                            <DatabaseOutlined /> <span>Lưu trữ Dự án</span>
+                            <DatabaseOutlined /> <span>{t('project_detail.files.storage_usage')}</span>
                         </div>
                         <div className="storage-meter">
                             <Progress 
@@ -239,16 +239,16 @@ export default function FilesTab() {
                                 showInfo={false}
                             />
                             <div className="storage-stats">
-                                <span className="used">{formatSize(totalStorage)} dùng</span>
-                                <span className="total">trên {formatSize(storageLimit)}</span>
+                                <span className="used">{formatSize(totalStorage)} {t('project_detail.files.used')}</span>
+                                <span className="total">{t('project_detail.files.total')} {formatSize(storageLimit)}</span>
                             </div>
                         </div>
-                        <Button block type="dashed" size="small" style={{ marginTop: 12 }}>Nâng cấp bộ nhớ</Button>
+                        <Button block type="dashed" size="small" style={{ marginTop: 12 }}>{t('project_detail.files.upgrade_storage', { defaultValue: 'Nâng cấp bộ nhớ' })}</Button>
                     </div>
 
                     <div className="side-card team-card">
                         <div className="side-card-header">
-                            <span>Thành viên Truy cập</span>
+                            <span>{t('library.viewers_placeholder', { defaultValue: 'Thành viên Truy cập' })}</span>
                             <span className="member-count">{members.length}</span>
                         </div>
                         <div className="member-list-mini">
@@ -257,7 +257,7 @@ export default function FilesTab() {
                                     <Avatar size="small" src={m.avatarUrl || `https://ui-avatars.com/api/?name=${m.fullName}`} />
                                     <div className="member-info">
                                         <p className="name">{m.fullName}</p>
-                                        <p className="role">{m.roleLevel || 'Cộng tác viên'}</p>
+                                        <p className="role">{m.roleLevel || t('library.role_employee')}</p>
                                     </div>
                                 </div>
                             ))}
@@ -269,7 +269,7 @@ export default function FilesTab() {
                             icon={<UserAddOutlined />} 
                             style={{ marginTop: 16, borderRadius: 8 }}
                         >
-                            Mời cộng tác
+                            {t('project_detail.team.invite')}
                         </Button>
                     </div>
                 </div>
