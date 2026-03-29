@@ -228,3 +228,105 @@
     .kanbanBoard { flex-direction: column; }
     .kanbanColumn { min-width: unset; max-width: unset; }
 }
+
+/* ─── Task Timeline (Mock) ─── */
+.task-timeline-wrapper {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #f3f4f6;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.timeline-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #111827;
+}
+
+.timeline-container {
+    position: relative;
+    padding-top: 20px;
+}
+
+.timeline-row.days {
+    display: flex;
+    justify-content: space-between;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    padding: 0 5%;
+}
+
+.timeline-row.grid-lines {
+    display: flex;
+    position: absolute;
+    top: 50px;
+    bottom: -20px;
+    left: 0;
+    right: 0;
+    z-index: 0;
+}
+
+.grid-col {
+    flex: 1;
+    border-left: 1px dashed #e5e7eb;
+}
+
+.grid-col.active-col {
+    border-left: 2px solid #111827;
+}
+
+.timeline-bubbles {
+    position: relative;
+    height: 120px;
+    z-index: 1;
+}
+
+.t-bubble {
+    position: absolute;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.t-date {
+    font-weight: 700;
+    margin-right: 6px;
+}
+
+.t-bubble.gray {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.t-bubble.black {
+    background: #111827;
+    color: #ffffff;
+}
+
+.t-bubble.disabled {
+    background: #fdfdfd;
+    border: 1px dashed #d1d5db;
+    color: #9ca3af;
+}
+
+.all-tasks-header {
+    margin-top: 32px;
+    margin-bottom: 16px;
+    font-size: 16px;
+    color: #111827;
+}

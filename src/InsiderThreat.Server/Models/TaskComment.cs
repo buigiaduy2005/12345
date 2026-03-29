@@ -1,0 +1,29 @@
+namespace InsiderThreat.Server.Models
+{
+    using MongoDB.Bson;
+    using MongoDB.Bson.Serialization.Attributes;
+    using System.Text.Json.Serialization;
+
+    public class TaskComment
+    {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        [JsonPropertyName("id")]
+        public string? Id { get; set; }
+
+        [BsonElement("taskId")]
+        public string TaskId { get; set; } = string.Empty;
+
+        [BsonElement("userId")]
+        public string UserId { get; set; } = string.Empty;
+
+        [BsonElement("content")]
+        public string Content { get; set; } = string.Empty;
+
+        [BsonElement("createdAt")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [BsonElement("updatedAt")]
+        public DateTime? UpdatedAt { get; set; }
+    }
+}

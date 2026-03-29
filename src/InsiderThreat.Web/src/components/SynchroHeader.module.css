@@ -1,0 +1,127 @@
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+    padding: 0 32px;
+    background: #ffffff;
+    border-bottom: 1px solid #f3f4f6;
+    font-family: 'Inter', sans-serif;
+}
+
+.breadcrumbWrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.breadcrumbItem {
+    color: #6b7280;
+}
+
+.breadcrumbItem.active {
+    background: #f3f4f6;
+    color: #111827;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.separator {
+    color: #9ca3af;
+    font-size: 10px;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.searchWrapper {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 16px;
+    width: 250px;
+    transition: width 0.3s;
+}
+
+.searchWrapper:focus-within {
+    border-color: #d1d5db;
+    box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.05);
+    width: 300px;
+}
+
+.searchIcon {
+    color: #9ca3af;
+    font-size: 16px;
+    margin-right: 8px;
+}
+
+.searchInput {
+    border: none;
+    outline: none;
+    background: transparent;
+    width: 100%;
+    color: #111827;
+    font-size: 14px;
+}
+
+.searchInput::placeholder {
+    color: #9ca3af;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+}
+
+.actionBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    color: #4b5563;
+    border: 1px solid #e5e7eb;
+}
+
+.actionBtn:hover {
+    background: #f9fafb;
+    color: #111827;
+    border-color: #d1d5db;
+}
+
+.divider {
+    width: 1px;
+    height: 24px;
+    background: #e5e7eb;
+}
+
+.membersSection {
+    display: flex;
+    align-items: center;
+}
+
+.avatarGroup {
+    margin-right: 8px;
+}
+
+.inviteBtn {
+    background: #111827;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    min-width: 80px;
+}
+
+.inviteBtn:hover {
+    background: #1f2937 !important;
+}

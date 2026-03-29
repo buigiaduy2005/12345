@@ -11,6 +11,7 @@ import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { api } from '../../services/api';
 import CreateTaskModal from './CreateTaskModal';
+import TaskDetailDrawer from './TaskDetailDrawer';
 import './MyTaskTab.css';
 
 interface Task {
@@ -33,15 +34,17 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
-    { id: 'Todo', label: 'Cần làm', color: '#8b949e', dotColor: '#8b949e' },
-    { id: 'InProgress', label: 'Đang làm', color: '#1890ff', dotColor: '#1890ff' },
-    { id: 'InReview', label: 'Xem xét', color: '#faad14', dotColor: '#faad14' },
-    { id: 'Done', label: 'Hoàn thành', color: '#52c41a', dotColor: '#52c41a' }
+    { id: 'Todo', label: 'To-do', color: '#8b949e', dotColor: '#8b949e' },
+    { id: 'InProgress', label: 'In Progress', color: '#1890ff', dotColor: '#4338ca' },
+    { id: 'InReview', label: 'In Review', color: '#faad14', dotColor: '#b45309' },
+    { id: 'WaitingApproval', label: 'Chờ duyệt', color: '#f97316', dotColor: '#c2410c' },
+    { id: 'Done', label: 'Completed', color: '#52c41a', dotColor: '#047857' }
 ];
 
 interface Member {
     id: string;
     fullName: string;
+    username: string;
     avatarUrl?: string;
 }
 
@@ -53,6 +56,8 @@ export default function MyTaskTab() {
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
     const [showCreateTask, setShowCreateTask] = useState(false);
+    const [showDrawer, setShowDrawer] = useState(false);
+    const [selectedTask, setSelectedTask] = useState<Task | undefined>(undefined);
     const [taskToEdit, setTaskToEdit] = useState<Task | undefined>(undefined);
     const [initialStatus, setInitialStatus] = useState<string | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState('');
@@ -180,6 +185,49 @@ export default function MyTaskTab() {
                 </div>
             </div>
 
+            {/* Task Calendar (Timeline Bubble) */}
+            <div className="task-timeline-wrapper animate-in">
+                <div className="timeline-header">
+                    <h3>Task Calendar</h3>
+                    <Button type="text" icon={<MoreOutlined />} />
+                </div>
+                <div className="timeline-container">
+                    <div className="timeline-row days">
+                        <span>11 Feb</span>
+                        <span>12 Feb</span>
+                        <span>13 Feb</span>
+                        <span>14 Feb</span>
+                        <span>15 Feb</span>
+                        <span>16 Feb</span>
+                    </div>
+                    
+                    <div className="timeline-row grid-lines">
+                        <div className="grid-col" />
+                        <div className="grid-col active-col" />
+                        <div className="grid-col" />
+                        <div className="grid-col" />
+                        <div className="grid-col" />
+                    </div>
+
+                    <div className="timeline-bubbles">
+                        <div className="t-bubble gray" style={{ left: '5%', width: '15%', top: 10 }}>
+                            <span className="t-date">11 Feb</span> Submit Final Screens
+                        </div>
+                        <div className="t-bubble gray" style={{ left: '5%', width: '15%', top: 40 }}>
+                            <span className="t-date">11 Feb</span> Client Feedback
+                        </div>
+                        <div className="t-bubble black" style={{ left: '20%', width: '18%', top: 70 }}>
+                            <span className="t-date">12 Feb</span> Client Feedback Meeting
+                        </div>
+                        <div className="t-bubble gray disabled" style={{ left: '60%', width: '18%', top: 50 }}>
+                            <span className="t-date">15 Feb</span> Finalize UI Screens
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 className="all-tasks-header">All Task</h3>
+
             {/* Kanban Board with DND */}
             {viewMode === 'kanban' && (
                 <DragDropContext onDragEnd={onDragEnd}>
@@ -223,6 +271,10 @@ export default function MyTaskTab() {
                                                                 {...provided.draggableProps}
                                                                 {...provided.dragHandleProps}
                                                                 className={`modern-kCard ${snapshot.isDragging ? 'is-dragging' : ''}`}
+                                                                onClick={() => {
+                                                                    setSelectedTask(task);
+                                                                    setShowDrawer(true);
+                                                                }}
                                                             >
                                                                  <div className="kCard-tagRow">
                                                                     <Space>
@@ -301,7 +353,7 @@ export default function MyTaskTab() {
                         <div className="list-col" style={{ width: 80 }}>Thao tác</div>
                     </div>
                     {filteredTasks.map(t => (
-                        <div key={t.id} className="list-row">
+                        <div key={t.id} className="list-row" onClick={() => { setSelectedTask(t); setShowDrawer(true); }}>
                             <div className="list-col title">{t.title}</div>
                             <div className="list-col">
                                 <Tag color={COLUMNS.find(c => c.id === t.status)?.dotColor}>{t.status}</Tag>
@@ -340,7 +392,7 @@ export default function MyTaskTab() {
                 </div>
             )}
 
-             {showCreateTask && (
+            {showCreateTask && (
                 <CreateTaskModal
                     task={taskToEdit}
                     initialStatus={initialStatus}
@@ -354,6 +406,23 @@ export default function MyTaskTab() {
                         setTaskToEdit(undefined);
                         setInitialStatus(undefined);
                         fetchData();
+                    }}
+                />
+            )}
+
+            {showDrawer && selectedTask && (
+                <TaskDetailDrawer
+                    open={showDrawer}
+                    onClose={() => {
+                        setShowDrawer(false);
+                        setSelectedTask(undefined);
+                    }}
+                    task={selectedTask}
+                    groupId={groupId || ''}
+                    members={members}
+                    onTaskUpdate={() => {
+                        fetchData();
+                        // Refetch specifically selectedTask if needed, but array update might be enough
                     }}
                 />
             )}

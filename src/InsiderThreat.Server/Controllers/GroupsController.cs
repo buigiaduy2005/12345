@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.GridFS;
@@ -18,20 +19,48 @@ namespace InsiderThreat.Server.Controllers
         private readonly IMongoCollection<Group> _groups;
         private readonly IMongoCollection<InsiderThreat.Shared.User> _users;
         private readonly IMongoCollection<ProjectTask> _tasks;
+        private readonly IMongoCollection<TaskComment> _taskComments;
         private readonly IMongoCollection<SharedDocument> _documents;
+        private readonly IMongoCollection<InsiderThreat.Shared.Notification> _notifications;
+        private readonly IHubContext<InsiderThreat.Server.Hubs.NotificationHub> _hubContext;
         private readonly IGridFSBucket _gridFS;
         private readonly ILogger<GroupsController> _logger;
         private readonly IMongoDatabase _database;
 
-        public GroupsController(IMongoDatabase database, IGridFSBucket gridFS, ILogger<GroupsController> logger)
+        public GroupsController(IMongoDatabase database, IGridFSBucket gridFS, ILogger<GroupsController> logger, IHubContext<InsiderThreat.Server.Hubs.NotificationHub> hubContext)
         {
             _database = database;
             _groups = database.GetCollection<Group>("Groups");
             _users = database.GetCollection<InsiderThreat.Shared.User>("Users");
             _tasks = database.GetCollection<ProjectTask>("ProjectTasks");
+            _taskComments = database.GetCollection<TaskComment>("TaskComments");
             _documents = database.GetCollection<SharedDocument>("SharedDocuments");
+            _notifications = database.GetCollection<InsiderThreat.Shared.Notification>("Notifications");
             _gridFS = gridFS;
             _logger = logger;
+            _hubContext = hubContext;
+        }
+
+        private async Task CreateAndPushNotification(string targetUserId, string message, string type, string? relatedId = null, string? link = null)
+        {
+            var actorUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var actorName = User.FindFirst(ClaimTypes.Name)?.Value ?? "Ai đó";
+
+            var notification = new InsiderThreat.Shared.Notification
+            {
+                Type = type,
+                TargetUserId = targetUserId,
+                ActorUserId = actorUserId,
+                ActorName = actorName,
+                Message = message,
+                Link = link,
+                RelatedId = relatedId,
+                IsRead = false,
+                CreatedAt = DateTime.Now
+            };
+
+            await _notifications.InsertOneAsync(notification);
+            await _hubContext.Clients.Group($"user_{targetUserId}").SendAsync("NewNotification", notification);
         }
 
         // GET: api/Groups
@@ -164,6 +193,20 @@ namespace InsiderThreat.Server.Controllers
                 }
 
                 await _tasks.InsertOneAsync(task);
+
+                // Notify assignee
+                if (!string.IsNullOrEmpty(task.AssignedTo))
+                {
+                    var group = await _groups.Find(g => g.Id == id).FirstOrDefaultAsync();
+                    await CreateAndPushNotification(
+                        task.AssignedTo,
+                        $"Bạn đã được giao nhiệm vụ mới: {task.Title} trong nhóm {group?.Name}",
+                        "TaskAssignment",
+                        task.Id,
+                        $"/groups/{id}?tab=mytask"
+                    );
+                }
+
                 return Ok(task);
             }
             catch (Exception ex)
@@ -178,10 +221,22 @@ namespace InsiderThreat.Server.Controllers
         {
             try
             {
-                var filter = Builders<ProjectTask>.Filter.And(
-                    Builders<ProjectTask>.Filter.Eq(t => t.Id, taskId),
-                    Builders<ProjectTask>.Filter.Eq(t => t.GroupId, id)
-                );
+                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var group = await _groups.Find(g => g.Id == id).FirstOrDefaultAsync();
+                if (group == null) return NotFound("Group not found");
+
+                var task = await _tasks.Find(t => t.Id == taskId && t.GroupId == id).FirstOrDefaultAsync();
+                if (task == null) return NotFound("Task not found");
+
+                bool isAdmin = currentUserId != null && group.AdminIds.Contains(currentUserId);
+                
+                // Quy trình Phê duyệt
+                if (taskUpdate.Status == "Done" && !isAdmin)
+                {
+                    taskUpdate.Status = "WaitingApproval";
+                }
+
+                var filter = Builders<ProjectTask>.Filter.Eq(t => t.Id, taskId);
 
                 var update = Builders<ProjectTask>.Update
                     .Set(t => t.Title, taskUpdate.Title)
@@ -195,11 +250,53 @@ namespace InsiderThreat.Server.Controllers
 
                 if (taskUpdate.Status == "Done")
                 {
-                    update = update.Set(t => t.CompletedAt, DateTime.UtcNow);
+                    update = update.Set(t => t.CompletedAt, DateTime.UtcNow)
+                                   .Set(t => t.CompletedBy, currentUserId);
                 }
 
                 await _tasks.UpdateOneAsync(filter, update);
-                return Ok(new { message = "Task updated successfully" });
+
+                // Notifications for Assignee
+                if (!string.IsNullOrEmpty(taskUpdate.AssignedTo))
+                {
+                    if (currentUserId != taskUpdate.AssignedTo || taskUpdate.Status == "Done" || taskUpdate.Status == "WaitingApproval")
+                    {
+                        string msg = taskUpdate.Status == "Done" 
+                            ? $"Nhiệm vụ '{taskUpdate.Title}' đã được phê duyệt hoàn thành!" 
+                            : taskUpdate.Status == "WaitingApproval"
+                                ? $"Nhiệm vụ '{taskUpdate.Title}' đang chờ phê duyệt."
+                                : $"Nhiệm vụ '{taskUpdate.Title}' của bạn có cập nhật mới.";
+                        
+                        await CreateAndPushNotification(
+                            taskUpdate.AssignedTo,
+                            msg,
+                            "TaskStatusChange",
+                            taskId,
+                            $"/groups/{id}?tab=mytask"
+                        );
+                    }
+                }
+
+                // Notify Admins for Approval Request
+                if (taskUpdate.Status == "WaitingApproval") 
+                {
+                    var uActor = await _users.Find(x => x.Id == currentUserId).FirstOrDefaultAsync();
+                    foreach (var aId in group.AdminIds) 
+                    {
+                        if (aId != currentUserId) 
+                        {
+                            await CreateAndPushNotification(
+                                aId,
+                                $"Thành viên {uActor?.FullName} yêu cầu phê duyệt nhiệm vụ: {taskUpdate.Title}",
+                                "TaskApprovalRequest",
+                                taskId,
+                                $"/groups/{id}?tab=mytask"
+                            );
+                        }
+                    }
+                }
+
+                return Ok(new { message = "Task updated successfully", status = taskUpdate.Status });
             }
             catch (Exception ex)
             {
@@ -228,6 +325,113 @@ namespace InsiderThreat.Server.Controllers
                 _logger.LogError(ex, "Error deleting task {TaskId}", taskId);
                 return StatusCode(500, "Internal server error");
             }
+        }
+
+        [HttpGet("{id}/tasks/{taskId}/comments")]
+        public async Task<IActionResult> GetTaskComments(string id, string taskId)
+        {
+            var comments = await _taskComments.Find(c => c.TaskId == taskId).SortByDescending(c => c.CreatedAt).ToListAsync();
+            // Fetch user info for each comment
+            var userIds = comments.Select(c => c.UserId).Distinct().ToList();
+            var users = await _users.Find(u => userIds.Contains(u.Id!)).ToListAsync();
+
+            var result = comments.Select(c => {
+                var u = users.FirstOrDefault(user => user.Id == c.UserId);
+                return new {
+                    c.Id,
+                    c.TaskId,
+                    c.Content,
+                    c.CreatedAt,
+                    User = new {
+                        Id = u?.Id,
+                        FullName = u?.FullName,
+                        AvatarUrl = u?.AvatarUrl
+                    }
+                };
+            }).OrderBy(c => c.CreatedAt);
+
+            return Ok(result);
+        }
+
+        [HttpPost("{id}/tasks/{taskId}/comments")]
+        public async Task<IActionResult> AddTaskComment(string id, string taskId, [FromBody] CreateTaskCommentReq req)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var comment = new TaskComment
+            {
+                TaskId = taskId,
+                UserId = userId,
+                Content = req.Content
+            };
+            await _taskComments.InsertOneAsync(comment);
+
+            // Notify task assignee
+            var task = await _tasks.Find(t => t.Id == taskId).FirstOrDefaultAsync();
+            if (task != null && !string.IsNullOrEmpty(task.AssignedTo) && task.AssignedTo != userId)
+            {
+                var uActor = await _users.Find(x => x.Id == userId).FirstOrDefaultAsync();
+                await CreateAndPushNotification(
+                    task.AssignedTo,
+                    $"{uActor?.FullName} đã bình luận trong nhiệm vụ: {task.Title}",
+                    "TaskComment",
+                    task.Id,
+                    $"/groups/{id}?tab=mytask"
+                );
+            }
+
+            var u = await _users.Find(x => x.Id == userId).FirstOrDefaultAsync();
+            return Ok(new {
+                comment.Id,
+                comment.TaskId,
+                comment.Content,
+                comment.CreatedAt,
+                User = new {
+                    Id = u?.Id,
+                    FullName = u?.FullName,
+                    AvatarUrl = u?.AvatarUrl
+                }
+            });
+        }
+
+        [HttpGet("{id}/analytics/daily-progress")]
+        public async Task<IActionResult> GetDailyAnalytics(string id)
+        {
+            // Fetch all tasks for the group that are completed
+            var completedTasks = await _tasks.Find(t => t.GroupId == id && t.Status == "Done" && t.CompletedAt != null && t.CompletedBy != null).ToListAsync();
+
+            // Group by Date (UTC Midnight)
+            var grouping = completedTasks
+                .GroupBy(t => t.CompletedAt!.Value.Date)
+                .OrderBy(g => g.Key)
+                .TakeLast(7) // Lấy 7 ngày gần nhất
+                .ToList();
+
+            var userIds = completedTasks.Select(t => t.CompletedBy).Distinct().ToList();
+            var usersList = await _users.Find(u => userIds.Contains(u.Id!)).ToListAsync();
+            var userDict = usersList.ToDictionary(u => u.Id!, u => u);
+
+            var result = grouping.Select(g => {
+                var completedBy = g.GroupBy(t => t.CompletedBy)
+                                   .Select(userGroup => {
+                                       var uInfo = userDict.ContainsKey(userGroup.Key!) ? userDict[userGroup.Key!] : null;
+                                       return new {
+                                            id = userGroup.Key,
+                                            name = uInfo?.FullName ?? "Unknown",
+                                            avatar = uInfo?.AvatarUrl ?? $"https://ui-avatars.com/api/?name={uInfo?.FullName ?? "U"}",
+                                            tasks = userGroup.Count()
+                                       };
+                                   }).ToList();
+
+                return new {
+                    date = g.Key.ToString("dd/MM"),
+                    totalTasks = g.Count(),
+                    completedBy = completedBy
+                };
+            });
+
+            return Ok(result);
         }
 
         // ─── FILE MANAGEMENT ──────────────────────────
@@ -270,6 +474,11 @@ namespace InsiderThreat.Server.Controllers
         public string? Priority { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? Deadline { get; set; }
+    }
+
+    public class CreateTaskCommentReq
+    {
+        public string Content { get; set; } = string.Empty;
     }
 
     public class CreateGroupRequest

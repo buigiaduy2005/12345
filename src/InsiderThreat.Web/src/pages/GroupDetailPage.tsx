@@ -8,6 +8,7 @@ import TimelineTab from '../components/groups/TimelineTab';
 import FilesTab from '../components/groups/FilesTab';
 import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
+import SynchroHeader from '../components/SynchroHeader';
 import './GroupDetailPage.css';
 
 const TABS = [
@@ -68,29 +69,38 @@ export default function GroupDetailPage() {
 
     return (
         <div className="groupDetail-container">
-            {!isMobile && <LeftSidebar />}
+            {/* DEBUG MARKER */}
+            <div style={{ 
+                position: 'fixed', 
+                top: 0, 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                zIndex: 9999, 
+                background: '#2563eb', 
+                color: 'white', 
+                padding: '4px 12px', 
+                borderRadius: '0 0 8px 8px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+            }}>
+                🚀 SYNCHRO CONCEPT v2.0 ACTIVE
+            </div>
+            {!isMobile && <LeftSidebar defaultCollapsed={true} />}
             
             <div className="groupDetail-main-wrapper">
                 <main className="groupDetail">
                     {/* Header Section */}
-                    <div className="groupDetail-top-section">
-                        <div className="groupDetail-header">
-                            <button className="backBtn" onClick={() => navigate('/groups')} title={t('common.btn_back', 'Quay lại')}>
-                                <span className="material-symbols-outlined">arrow_back</span>
-                            </button>
-                            <div className="groupInfo">
-                                <div className="project-breadcrumb">
-                                    <span>{t('project_detail.breadcrumbs.workspace')}</span>
-                                    <span className="bc-sep">/</span>
-                                    <span>{t('project_detail.breadcrumbs.projects')}</span>
-                                    <span className="bc-sep">/</span>
-                                    <span className="bc-active">{groupName}</span>
-                                </div>
-                                <h1 className="groupTitle">{groupName}</h1>
-                                <p className="groupSubtitle">{t('project_detail.header.subtitle')} • {t('project_detail.header.sprint')}</p>
-                            </div>
-                        </div>
+                    {/* HEADER THEO THIẾT KẾ MỚI */}
+                    <SynchroHeader 
+                        breadcrumb={[
+                            { label: 'Workspace' },
+                            { label: 'Projects' },
+                            { label: groupName || 'Loading...', active: true }
+                        ]} 
+                    />
 
+                    <div className="groupDetail-top-section">
                         {/* Sub-Header / Tab Navigation */}
                         <div className="groupDetail-tabs-wrapper">
                             <div className="groupDetail-tabs">
