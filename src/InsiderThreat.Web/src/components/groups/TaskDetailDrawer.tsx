@@ -251,13 +251,7 @@ export default function TaskDetailDrawer({ open, onClose, task, groupId, members
                 ) : (
                     <div className="assignee-tag placeholder">Chưa phân công</div>
                 )}
-                {/* Visual mock tags to closely resemble image 5 */}
-                <div className="assignee-tag green">
-                    Joe Tesla <CloseOutlined className="remove-icon" />
-                </div>
-                <div className="assignee-tag yellow">
-                    Tania <CloseOutlined className="remove-icon" />
-                </div>
+                {/* Nút thêm người thực hiện */}
                 <Button size="small" className="add-assignee-btn" icon={<span style={{fontSize: 14}}>+</span>} />
             </div>
         );

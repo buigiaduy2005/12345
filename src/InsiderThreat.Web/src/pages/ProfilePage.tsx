@@ -159,6 +159,7 @@ export default function ProfilePage() {
         if (r.includes('admin')) return 'role-admin';
         if (r.includes('quản lý') || r.includes('manager')) return 'role-manager';
         if (r.includes('giám đốc') || r.includes('director')) return 'role-director';
+        if (r.includes('nhân viên') || r.includes('staff')) return 'role-staff';
         return 'role-staff';
     };
 

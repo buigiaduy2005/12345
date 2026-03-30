@@ -152,9 +152,9 @@ export default function WorkspacePage() {
     };
 
     const statusData = useMemo(() => {
-        if (!stats?.StatusStats) return [];
+        if (!stats?.statusStats) return [];
         const counts: Record<string, number> = { Todo: 0, InProgress: 0, InReview: 0, WaitingApproval: 0, Done: 0 };
-        stats.StatusStats.forEach((s: { status: string; count: number }) => {
+        stats.statusStats.forEach((s: { status: string; count: number }) => {
             if (counts[s.status] !== undefined) counts[s.status] += s.count;
         });
 
@@ -167,14 +167,14 @@ export default function WorkspacePage() {
     }, [stats]);
 
     const timelineData = useMemo(() => {
-        if (!stats?.Tasks) return [];
+        if (!stats?.tasks) return [];
         const days = [];
         for (let i = 0; i < 7; i++) {
             days.push(dayjs().startOf('week').add(i, 'day'));
         }
 
         return days.map(d => {
-            const count = stats.Tasks.filter((t: any) => t.deadline && dayjs(t.deadline).isSame(d, 'day')).length;
+            const count = stats.tasks.filter((t: any) => t.deadline && dayjs(t.deadline).isSame(d, 'day')).length;
             return {
                 day: d.format('ddd'),
                 tasks: count,
@@ -286,14 +286,14 @@ export default function WorkspacePage() {
                         <div className="glass-stat-card fade-in-up" style={{ animationDelay: '0.1s' }}>
                             <div className="stat-icon-wrapper blue-glow"><ClockCircleOutlined /></div>
                             <div className="text-gray-500 text-sm font-medium">Tổng nhiệm vụ</div>
-                            <div className="text-3xl font-bold mt-1Value">{stats.TotalTasks}</div>
+                            <div className="text-3xl font-bold mt-1Value">{stats.totalTasks}</div>
                             <div className="text-xs text-blue-500 mt-2 font-semibold">Tăng 12% so với tuần trước</div>
                         </div>
                         <div className="glass-stat-card fade-in-up" style={{ animationDelay: '0.2s' }}>
                             <div className="stat-icon-wrapper green-glow"><CheckCircleOutlined /></div>
                             <div className="text-gray-500 text-sm font-medium">Hoàn thành</div>
-                            <div className="text-3xl font-bold mt-1">{stats.OnTimeCount}</div>
-                            <div className="text-xs text-green-500 mt-2 font-semibold">Hiệu suất: {Math.round((stats.OnTimeCount / stats.TotalTasks) * 100 || 0)}%</div>
+                            <div className="text-3xl font-bold mt-1">{stats.onTimeCount}</div>
+                            <div className="text-xs text-green-500 mt-2 font-semibold">Hiệu suất: {Math.round((stats.onTimeCount / stats.totalTasks) * 100 || 0)}%</div>
                         </div>
                         <div className="glass-stat-card fade-in-up" style={{ animationDelay: '0.3s' }}>
                             <div className="stat-icon-wrapper orange-glow"><CalendarOutlined /></div>
@@ -318,10 +318,10 @@ export default function WorkspacePage() {
                             </div>
                             
                             <div className="space-y-2">
-                                {stats.Tasks?.length === 0 && (
+                                {(stats.tasks === undefined || stats.tasks.length === 0) && (
                                     <div className="text-center py-10 text-gray-400">Bạn không có nhiệm vụ nào cần làm ngay.</div>
                                 )}
-                                {stats.Tasks?.slice(0, 5).map((task: any) => (
+                                {stats.tasks?.slice(0, 5).map((task: any) => (
                                     <div key={task.id} className="premium-list-item" onClick={() => navigate(`/groups/${task.groupId}?tab=mytask`)}>
                                         <div className="flex items-center gap-4">
                                             <div className={`p-2 rounded-xl ${task.status === 'InProgress' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
