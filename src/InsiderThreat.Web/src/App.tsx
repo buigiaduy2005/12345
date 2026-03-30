@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, theme, App as AntdApp } from 'antd';
+import { setStaticInstances } from './utils/antdStatic';
+
+// Bridge component: captures context-aware antd APIs and stores them globally
+function AntdStaticHolder() {
+  const { message, notification, modal } = AntdApp.useApp();
+  useEffect(() => {
+    setStaticInstances(message, notification, modal);
+  }, [message, notification, modal]);
+  return null;
+}
 import viVN from 'antd/locale/vi_VN';
 import enUS from 'antd/locale/en_US';
 import { useTranslation } from 'react-i18next';
@@ -92,6 +102,7 @@ function App() {
       }}
     >
       <AntdApp>
+        <AntdStaticHolder />
         <BrowserRouter>
           <NotificationProvider>
             <Routes>

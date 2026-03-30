@@ -13,7 +13,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as faceapi from '@vladmandic/face-api';
-import { loadFaceApiModels, getFaceDetectorOptions } from '../services/faceApi';
+import { loadFaceApiModels, getFaceDetectorOptions, ensureRecognitionReady } from '../services/faceApi';
 import { LivenessDetector, generateChallenges } from '../services/livenessService';
 
 import type { LivenessChallenge as LivenessChallengeType } from '../services/livenessService';
@@ -135,10 +135,9 @@ export default function LivenessChallengeComponent({ visible, onComplete, onFail
 
             try {
                 const options = getFaceDetectorOptions();
+                // Only detect face + landmarks for liveness (NO descriptor - saves ~90% CPU per frame)
                 const detection = await api.detectSingleFace(videoRef.current, options)
-                    .withFaceLandmarks()
-                    .withFaceDescriptor();
-
+                    .withFaceLandmarks();
 
                 if (detection) {
                     const challenge = challengeList[idx];
@@ -158,11 +157,20 @@ export default function LivenessChallengeComponent({ visible, onComplete, onFail
                             startDetectionLoop(updated, nextIdx);
                             return; // Don't continue this loop
                         } else {
-                            // All challenges completed! Capture final descriptor
+                            // All challenges completed! Now load recognition model & capture descriptor
                             setPhase('capturing');
-                            const descriptor = Array.from(detection.descriptor) as number[];
-                            setPhase('done');
-                            onComplete(descriptor, true);
+                            await ensureRecognitionReady();
+                            const finalDetection = await api.detectSingleFace(videoRef.current, options)
+                                .withFaceLandmarks()
+                                .withFaceDescriptor();
+                            if (finalDetection) {
+                                const descriptor = Array.from(finalDetection.descriptor) as number[];
+                                setPhase('done');
+                                onComplete(descriptor, true);
+                            } else {
+                                setPhase('failed');
+                                onFail('Mất dấu khuôn mặt ở bước cuối. Vui lòng thử lại.');
+                            }
                             return;
                         }
                     }

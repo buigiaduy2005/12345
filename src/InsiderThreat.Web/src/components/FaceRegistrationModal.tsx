@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Modal, Button, message, Space, Spin, Alert, Progress } from 'antd';
 import { CameraOutlined, SafetyCertificateOutlined, CheckCircleFilled } from '@ant-design/icons';
 import * as faceapi from '@vladmandic/face-api';
-import { loadFaceApiModels, getFaceDetectorOptions } from '../services/faceApi';
+import { loadFaceApiModels, getFaceDetectorOptions, ensureRecognitionReady } from '../services/faceApi';
 import { api } from '../services/api';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../services/auth';
@@ -25,7 +25,6 @@ function FaceRegistrationModal({ visible, onCancel, userId, userName }: FaceRegi
     const detectorRef = useRef(new LivenessDetector(10000)); // 10s timeout
 
     const [phase, setPhase] = useState<RegistrationPhase>('checking_device');
-    const [blinkCount, setBlinkCount] = useState(0);
     const [processing, setProcessing] = useState(false);
     const [blockedDevice, setBlockedDevice] = useState<string | null>(null);
     const { t } = useTranslation();
@@ -89,41 +88,9 @@ function FaceRegistrationModal({ visible, onCancel, userId, userName }: FaceRegi
         return () => stopCamera();
     }, [visible, stopCamera, startCamera, t]);
 
-    const startLivenessCheck = () => {
-        setPhase('verifying_liveness');
-        setBlinkCount(0);
-        detectorRef.current.reset();
-        detectionLoop();
-    };
-
-    const detectionLoop = async () => {
-        if (!videoRef.current || phase === 'done') return;
-
-        const api = (faceapi as any).default || faceapi;
-        try {
-            const options = getFaceDetectorOptions();
-            const detection = await api.detectSingleFace(videoRef.current, options)
-                .withFaceLandmarks();
-
-
-            if (detection) {
-                const isBlinked = detectorRef.current.processFrame(detection.landmarks, 'blink');
-                
-                // Cập nhật số lần chớp mắt để hiển thị UI (dùng internal state của detector)
-                const currentBlinks = (detectorRef.current as any).blinkCount || 0;
-                setBlinkCount(currentBlinks);
-
-                if (isBlinked) {
-                    // Liveness verified! Move to capture
-                    handleFinalCapture();
-                    return;
-                }
-            }
-        } catch (e) { /* ignore frame error */ }
-
-        if (phase === 'verifying_liveness') {
-            animFrameRef.current = requestAnimationFrame(detectionLoop);
-        }
+    const startRegistration = () => {
+        if (!videoRef.current) return;
+        handleFinalCapture();
     };
 
     const handleFinalCapture = async () => {
@@ -135,13 +102,17 @@ function FaceRegistrationModal({ visible, onCancel, userId, userName }: FaceRegi
         try {
             const api = (faceapi as any).default || faceapi;
             const options = getFaceDetectorOptions();
+
+            // Ensure heavy recognition model is loaded (usually already preloaded in background)
+            await ensureRecognitionReady();
+
             const finalDetection = await api.detectSingleFace(videoRef.current, options)
                 .withFaceLandmarks()
                 .withFaceDescriptor();
 
 
             if (!finalDetection) {
-                message.error("Lỗi: Mất dấu khuôn mặt ở bước cuối. Thử lại.");
+                message.error("Lỗi: Không tìm thấy khuôn mặt. Hãy nhìn thẳng vào camera và thử lại.");
                 setPhase('ready');
                 return;
             }
@@ -188,10 +159,10 @@ function FaceRegistrationModal({ visible, onCancel, userId, userName }: FaceRegi
                         key="start"
                         type="primary"
                         icon={<CameraOutlined />}
-                        onClick={startLivenessCheck}
+                        onClick={startRegistration}
                         disabled={!!blockedDevice}
                     >
-                        Bắt đầu xác minh & Đăng ký
+                        Bắt đầu Đăng ký
                     </Button>
                 ),
             ]}
@@ -208,11 +179,9 @@ function FaceRegistrationModal({ visible, onCancel, userId, userName }: FaceRegi
                     />
                 ) : (
                     <Alert
-                        title={<span style={{ fontWeight: 600 }}>{phase === 'verifying_liveness' ? "Xác minh thực thể sống" : "Hướng dẫn đăng ký"}</span>}
-                        description={phase === 'verifying_liveness' 
-                            ? "Vui lòng chớp mắt 2 lần trước camera để xác nhận bạn là người thật." 
-                            : "Nhìn thẳng vào máy ảnh, đảm bảo đủ ánh sáng. Hệ thống sẽ yêu cầu bạn chớp mắt để bảo mật."}
-                        type={phase === 'verifying_liveness' ? "warning" : "info"}
+                        title={<span style={{ fontWeight: 600 }}>Hướng dẫn đăng ký</span>}
+                        description={"Nhìn thẳng vào máy ảnh, đảm bảo đủ ánh sáng và nhấn nút Bắt đầu Đăng ký."}
+                        type="info"
                         showIcon
                     />
                 )}
@@ -236,30 +205,7 @@ function FaceRegistrationModal({ visible, onCancel, userId, userName }: FaceRegi
                                 style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
                             />
                             
-                            {/* Overlay cho bước chớp mắt */}
-                            {phase === 'verifying_liveness' && (
-                                <div style={{
-                                    position: 'absolute', inset: 0,
-                                    background: 'rgba(0,0,0,0.2)',
-                                    display: 'flex', flexDirection: 'column',
-                                    alignItems: 'center', justifyContent: 'center'
-                                }}>
-                                    <div style={{ 
-                                        padding: '12px 24px', background: 'rgba(0,0,0,0.7)', 
-                                        borderRadius: 30, color: '#fff', textAlign: 'center'
-                                    }}>
-                                        <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>VUI LÒNG CHỚP MẮT</div>
-                                        <Progress 
-                                            percent={(blinkCount / 2) * 100} 
-                                            steps={2} 
-                                            strokeColor="#52c41a" 
-                                            showInfo={false}
-                                            style={{ width: 120 }}
-                                        />
-                                        <div style={{ marginTop: 4 }}>{blinkCount}/2 lần</div>
-                                    </div>
-                                </div>
-                            )}
+
 
                             {phase === 'capturing' && (
                                 <div style={{
