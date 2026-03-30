@@ -131,14 +131,6 @@ namespace InsiderThreat.Server.Controllers
                     .SortBy(g => g.Name)
                     .ToListAsync();
 
-                // Auto-restore any corrupted project names due to the previous patch bug
-                foreach(var g in groups) {
-                    if (string.IsNullOrEmpty(g.Name)) {
-                        g.Name = "Dự án (Khôi phục)";
-                        await _groups.UpdateOneAsync(x => x.Id == g.Id, Builders<Group>.Update.Set(x => x.Name, g.Name).Set(x => x.Status, "New"));
-                    }
-                }
-
                 return Ok(groups);
             }
             catch (Exception ex)
