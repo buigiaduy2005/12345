@@ -3,13 +3,14 @@ using MongoDB.Bson;
 using System;
 using System.Linq;
 
-var connectionString = "mongodb://admin:admin123@192.168.203.142:27017/?authSource=admin";
+var connectionString = "mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin";
 var client = new MongoClient(connectionString);
 var db = client.GetDatabase("InsiderThreatDB");
 var users = db.GetCollection<BsonDocument>("Users");
 
-var u = users.Find(Builders<BsonDocument>.Filter.Regex("FullName", new BsonRegularExpression("Bùi Gia Duy1"))).FirstOrDefault();
-if (u != null)
+var usersList = users.Find(new BsonDocument()).ToList();
+Console.WriteLine($"Found {usersList.Count} users:");
+foreach (var user in usersList)
 {
-    Console.WriteLine(u.ToJson(new MongoDB.Bson.IO.JsonWriterSettings { Indent = true }));
+    Console.WriteLine(user.ToJson(new MongoDB.Bson.IO.JsonWriterSettings { Indent = true }));
 }

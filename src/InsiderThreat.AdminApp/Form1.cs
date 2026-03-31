@@ -14,10 +14,9 @@ namespace InsiderThreat.AdminApp
 {
     public partial class Form1 : Form
     {
-        // ⚠️ QUAN TRỌNG: Nếu AdminApp chạy cùng máy với Backend thì dùng localhost
-        // Nếu chạy khác máy thì đổi thành IP Backend (ví dụ: http://192.168.1.xxx:5038/api/logs)
-        // URL sẽ được load từ file config
-        private string _apiUrl = "http://localhost:5038/api/logs";
+        // ✅ AdminApp chạy trên máy Windows của Admin, kết nối về Server Production
+        // URL sẽ được load từ file appsettings.json (ưu tiên)
+        private string _apiUrl = "https://tuyen-thda.io.vn/api/logs";
 
         private readonly HttpClient _client = new HttpClient();
 

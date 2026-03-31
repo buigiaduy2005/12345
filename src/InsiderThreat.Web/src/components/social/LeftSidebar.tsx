@@ -10,7 +10,10 @@ import {
     ScheduleOutlined,
     CheckSquareOutlined,
     ClusterOutlined,
-    TableOutlined
+    TableOutlined,
+    UsergroupAddOutlined,
+    CalendarOutlined,
+    FileProtectOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import styles from './LeftSidebar.module.css';

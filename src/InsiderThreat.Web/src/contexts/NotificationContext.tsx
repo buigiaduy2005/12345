@@ -67,7 +67,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
             // 🚀 BẮN THÔNG BÁO HỆ THỐNG (Hiện lên điện thoại/máy tính)
             if ("Notification" in window && Notification.permission === "granted") {
-                new Notification(notification.title || "Cảnh báo InsiderThreat", {
+                new Notification((notification as any).title || "Cảnh báo InsiderThreat", {
                     body: notification.message,
                     icon: "/favicon.ico"
                 });

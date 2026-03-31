@@ -35,7 +35,7 @@ if ($deployFrontend) {
     Write-Host "✅ Frontend built successfully" -ForegroundColor Green
 
     Write-Host "[2/4] Uploading frontend to server..." -ForegroundColor Yellow
-    scp -r dist\* "${SERVER}:/var/www/insiderthreat-web"
+    scp -o StrictHostKeyChecking=no -r dist\* "${SERVER}:/var/www/insiderthreat-web"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Frontend upload FAILED!" -ForegroundColor Red
         exit 1
@@ -47,7 +47,7 @@ if ($deployFrontend) {
 if ($deployBackend) {
     Write-Host "[3/4] Publishing backend..." -ForegroundColor Yellow
     Set-Location "$ROOT\src\InsiderThreat.Server"
-    dotnet publish -c Release -r linux-x64 --self-contained false -o ./publish /p:TreatWarningsAsErrors=false
+    dotnet publish -c Release -o ./publish /p:TreatWarningsAsErrors=false
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Backend publish FAILED!" -ForegroundColor Red
         exit 1
@@ -55,10 +55,16 @@ if ($deployBackend) {
     Write-Host "✅ Backend published" -ForegroundColor Green
 
     Write-Host "[4/4] Uploading backend to server..." -ForegroundColor Yellow
-    scp -r publish\* "${SERVER}:/root/insiderthreat-server"
+    scp -o StrictHostKeyChecking=no -r publish\* "${SERVER}:/root/insiderthreat-server"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Backend upload FAILED!" -ForegroundColor Red
         exit 1
+    }
+    
+    Write-Host "[4.5/4] Uploading Nginx configuration..." -ForegroundColor Yellow
+    scp -o StrictHostKeyChecking=no "$ROOT\nginx\insiderthreat.conf" "${SERVER}:/etc/nginx/sites-available/insiderthreat"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "⚠️ Warning: Failed to upload Nginx config!" -ForegroundColor Yellow
     }
     Write-Host "✅ Backend uploaded" -ForegroundColor Green
 }
@@ -72,11 +78,11 @@ if ($deployFrontend) {
     $serverCmd += "chown -R www-data:www-data /var/www/insiderthreat-web; chmod -R 755 /var/www/insiderthreat-web; "
 }
 if ($deployBackend) {
-    $serverCmd += "systemctl restart insiderthreat; sleep 2; systemctl is-active insiderthreat; "
+    $serverCmd += "systemctl restart insiderthreat; sleep 2; systemctl is-active insiderthreat; systemctl reload nginx; "
 }
 
 if ($serverCmd) {
-    ssh $SERVER $serverCmd
+    ssh -o StrictHostKeyChecking=no $SERVER $serverCmd
 }
 
 Write-Host ""
