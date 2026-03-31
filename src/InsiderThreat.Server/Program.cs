@@ -22,7 +22,7 @@ builder.Services.AddSingleton<IMongoClient>(s =>
 {
     var connStr = Environment.GetEnvironmentVariable("MONGODB_CONNECTION_STRING") 
                   ?? mongoSettings.GetValue<string>("ConnectionString") 
-                  ?? "mongodb://admin:admin123@127.0.0.1:27017/?authSource=admin";
+                  ?? "mongodb://admin:admin123@192.168.203.142:27017/?authSource=admin";
     
     return new MongoClient(connStr);
 });
